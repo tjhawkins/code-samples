@@ -1,0 +1,166 @@
+USE [FSC]
+GO
+/****** Object:  StoredProcedure [dbo].[sp_Calculate_Accepted_Shifts]    Script Date: 09/03/2015 18:01:39 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+-- =============================================
+-- Author:		Tim Hawkins
+-- Create date: 1/19/2015
+-- Description:	Calculate Accepted/Decline Shifts for an employee
+-- =============================================
+ALTER PROCEDURE [dbo].[sp_Calculate_Accepted_Shifts]
+	-- Add the parameters for the stored procedure here
+	@BeginDate datetime,
+	@EndDate datetime,
+	@EmployeeID int
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+SEt DATEFIRST  5; -- Set BEginning of the week to Friday
+
+-- Retrieve Employee Follow Up Cases for Accepted Shifts, Declined Shifts and No Answer
+SELECT
+	Convert(varchar,DATEADD(dd, 7-(DATEPART(dw, f.DateEntered)), f.DateEntered),101)As WeekendDate,
+	ISNULL(SUM(CASE WHEN f.ReasonID IN(28,32,33,34,35,37,75,76) THEN 1 Else 0 END),0) As ContactAttempts,
+	ISNULL(SUM(Case WHEN (f.ReasonID >= 27 And f.ReasonID <=29) THen 1 Else 0 END),0) As AcceptedShifts,
+	ISNULL(SUM(Case WHEN (f.ReasonID >= 36 And f.ReasonID <=38) THen 1 Else 0 END),0) As DeclinedShifts,
+	ISNULL (SUM(Case WHEN (f.ReasonID =75 OR f.ReasonID =76) THen 1 Else 0 END),0) As NoAnswer,
+	0 As NoResponse,
+	0 As RequestforWork,
+	0 As ReAccecptedShifts,
+	0 As ReDeclinedShifts,
+	ISNULL(SUM(Case WHEN (f.ReasonID >= 30 And f.ReasonID <=31) THen 1 Else 0 END),0) As AcceptedShiftsOther
+INTO #TotalResponses
+FROM tbl_Employees e
+Left Join tbl_followUps f On e.EmployeeID = f.EmployeeID
+WHERE (e.TestAccount IS NULL OR e.TestAccount = 'False')
+AND f.DateEntered BETWEEN @BeginDate AND Convert(datetime, CONVERT(varchar,@EndDate + ' 23:59:59')) 
+AND (e.RegionID = 1 OR e.REgionId = 4 OR e.RegionID = 5 OR e.RegionID = 8)
+AND e.EmployeeID = @EmployeeID
+Group BY Convert(varchar,DATEADD(dd, 7-(DATEPART(dw, f.DateEntered)), f.DateEntered),101), (e.FirstName + ' ' + e.LastName)
+ORDER BY  (e.FirstName + ' ' + e.LastName), Convert(varchar,DATEADD(dd, 7-(DATEPART(dw, f.DateEntered)), f.DateEntered),101)	 
+
+-- Determine if Employee was called but never responded
+-- Insert Follow cases for left messages and Responses into a temp table
+-- Find  matching case numbers in both Messages and Responses
+SELECT * 
+INTO #MESSAGES
+FROM tbl_FollowUPS f
+WHERE (f.ReasonID >= 32 And f.ReasonID <=34)
+      AND f.EmployeeID = @EmployeeID
+      AND f.DateEntered BETWEEN @BEginDate AND Convert(datetime, CONVERT(varchar,@EndDate + ' 23:59:59')) 
+      
+      
+SELECT * 
+INTO #RESPONSES
+FROM tbl_FollowUPS f
+WHERE ((f.ReasonID >= 27 And f.ReasonID <=29) OR (f.ReasonID >= 36 And f.ReasonID <=38)
+		OR ReasonID = 35)
+      AND f.EmployeeID = @EmployeeID
+      AND CaseNumber IN (SELECT CaseNumber FROM #Messages)
+      AND f.DateEntered BETWEEN @BeginDate AND Convert(datetime, CONVERT(varchar,@EndDate + ' 23:59:59')) 
+
+
+SELECT Convert(varchar,DATEADD(dd, 7-(DATEPART(dw, DateEntered)), DateEntered),101)As WeekendDate,
+0 As ContactAttempts,
+0 As AcceptedShifts,
+0 As DeclinedShifts,
+0 As NoAnswer,
+COUNT(CaseNumber) As NoResponse,
+0 As RequestforWork,
+0 As ReAccecptedShifts,
+0 As ReDeclinedShifts,
+0 As AcceptedShiftsOther
+INTO #NoResponse 
+FROM #MESSAGES
+WHERE CaseNumber NOT IN (SELECT CaseNumber FROM #Responses WHERE ReasonID NOT IN(28, 36))
+GROUP BY Convert(varchar,DATEADD(dd, 7-(DATEPART(dw, DateEntered)), DateEntered),101)
+
+-- Retrieve Employee Request for Work Cases 
+SELECT
+	Convert(varchar,DATEADD(dd, 7-(DATEPART(dw, c.DateEntered)), c.DateEntered),101)As WeekendDate,
+	0 As ContactAttempts,
+	0 As AcceptedShifts,
+	0 As DeclinedShifts,
+	0 As NoAnswer,
+	0 As NoResponse,
+	ISNULL (SUM(Case WHEN c.CaseTypeID = 10 THen 1 Else 0 END),0) As RequestforWork,
+	0 As ReAccecptedShifts,
+	0 As ReDeclinedShifts,
+	0 As AcceptedShiftsOther
+INTO #TotalRequests
+FROM tbl_Employees e
+Left Join tbl_Cases c On e.EmployeeID = c.EmployeeID
+WHERE (e.TestAccount IS NULL OR e.TestAccount = 'False')
+AND c.DateEntered BETWEEN @BeginDate AND Convert(datetime, CONVERT(varchar,@EndDate + ' 23:59:59')) 
+AND (e.RegionID = 1 OR e.REgionId = 4 OR e.RegionID = 5 OR e.RegionID = 8)
+AND e.EmployeeID = @EmployeeID
+Group BY Convert(varchar,DATEADD(dd, 7-(DATEPART(dw, c.DateEntered)), c.DateEntered),101), (e.FirstName + ' ' + e.LastName)
+ORDER BY  (e.FirstName + ' ' + e.LastName), Convert(varchar,DATEADD(dd, 7-(DATEPART(dw, c.DateEntered)), c.DateEntered),101)
+
+
+SELECT 
+	Convert(varchar,DATEADD(dd, 7-(DATEPART(dw, f.DateEntered)), f.DateEntered),101)As WeekendDate,
+	0 As ContactAttempts,
+	0 As AcceptedShifts,
+	0 As DeclinedShifts,
+	0 As NoAnswer,
+	0 As NoResponse,
+	0 As RequestforWork,
+	ISNULL(SUM(CASE WHEN f.ReasonID = 93 THEN 1 ELSE 0 END),0) As ReAccecptedShifts,
+	ISNULL(SUM(CASE WHEN f.ReasonID = 94 THEN 1 ELSE 0 END),0) As ReDeclinedShifts,
+	0 As AcceptedShiftsOther
+INTO #RequestsShiftsTotals
+FROM tbl_Employees e
+	Left Join tbl_followUps f On e.EmployeeID = f.EmployeeID
+WHERE (e.TestAccount IS NULL OR e.TestAccount = 'False')
+AND f.DateEntered BETWEEN @BeginDate AND Convert(datetime, CONVERT(varchar,@EndDate + ' 23:59:59')) 
+AND (e.RegionID = 1 OR e.REgionId = 4 OR e.RegionID = 5 OR e.RegionID = 8)
+AND e.EmployeeID = @EmployeeID
+Group BY Convert(varchar,DATEADD(dd, 7-(DATEPART(dw, f.DateEntered)), f.DateEntered),101), (e.FirstName + ' ' + e.LastName)
+ORDER BY  (e.FirstName + ' ' + e.LastName), Convert(varchar,DATEADD(dd, 7-(DATEPART(dw, f.DateEntered)), f.DateEntered),101)	 
+
+SELECT *
+INTO #AgentResponses
+FROM #TotalResponses
+UNION
+SELECT * 
+FROM #NoResponse 
+UNION
+SELECT * 
+FROM #TotalRequests
+UNION 
+SELECT * 
+FROM #RequestsShiftsTotals
+
+
+SELECT WeekendDate As [Weekending Date], 
+SUM(AcceptedShifts) As [Accepted Shifts], 
+SUM(DeclinedSHifts) As [Declined Shifts], 
+SUM(NoAnswer) As [No Answer / Non Working Number], 
+SUM(NoResponse) As [No Response],
+SUM(ContactAttempts) As [Total Outbound Contact Attempts],
+SUM(RequestforWork) As [Request for Work],
+SUM(ReAccecptedShifts) AS [Request for Work AS],
+SUM(ReDeclinedShifts) AS [Request for Work DS],
+SUM(AcceptedShiftsOther) As [Accepted Shift per Plaza/Region] 
+FROM #AgentResponses
+GROUP BY WeekendDate
+
+
+------CLEAN UP
+
+DROP TABLE #RESPONSES
+DROP TABLE #MESSAGES
+DROP TABLE #NoResponse
+DROP TABLE #TotalResponses
+DROP TABLE #AgentResponses
+DROP TABLE #TotalRequests
+DROP TABLE #RequestsShiftsTotals
+END
