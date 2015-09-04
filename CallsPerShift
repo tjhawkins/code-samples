@@ -1,0 +1,90 @@
+USE [FSC]
+GO
+/****** Object:  StoredProcedure [dbo].[sp_Calcaulate_Calls_Per_Open_Shift]    Script Date: 09/03/2015 18:00:26 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+-- =============================================
+-- Author:		Tim Hawkins
+-- Create date: 1/12/2014
+-- Description:	Calculate the Number of Calls made per Open Shift
+-- =============================================
+ALTER PROCEDURE [dbo].[sp_Calcaulate_Calls_Per_Open_Shift] 
+	-- Add the parameters for the stored procedure here
+	@StartDate datetime,
+	@EndDate datetime
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+SET DateFirst  5;
+SELECT 
+c.ShiftDate,
+r.RegionName,
+COUNT(f.FollowUPID) As NumOfCalls,
+0  As OpenShifts
+INTO #NumOfCalls
+FROM tbl_FollowUps f
+JOIN tbl_Cases c
+	ON f.CaseNumber = c.caseNumber
+JOIN tbl_Regions r
+	ON c.RegionID = r.RegionID
+WHERE (f.CaseTypeID = 5 AND (f.ReasonID IS NOT NULL AND f.ReasonID IN (SELECT ReasonID FROM tbl_Reasons WHERE Outbound = 1)))
+	AND (f.CaseError Is NULL OR f.CaseError='False')
+	ANd c.ShiftDate Between @StartDate AND @EndDate
+	--AND (f.DateEntered Between '2015-01-01' AND '2015-12-31')
+	
+	AND (c.RegionID = 1 OR c.RegionID = 4 OR c.REgionID = 5 OR c.RegionID = 8)
+	AND c.EnteredBy <> 1111
+GrOUP BY c.ShiftDate, r.RegionName
+ORder BY c.SHiftDate
+
+SELECT 
+c.ShiftDate,
+r.RegionName,
+0 As NumOfCalls,
+Count(CaseNumber) As OpenShifts
+INTO #OpenShifts
+FROM tbl_Cases c
+JOIN tbl_Regions r
+	ON c.RegionID = r.RegionID
+WHERE (c.CaseTypeID <=4 Or c.CaseTypeID = 6 OR c.CaseTypeID = 7)
+	AND (c.CaseError Is NULL OR c.CaseError='False')
+	AND (c.DisregardCase Is NULL OR c.DisregardCase='False')
+	ANd ( c.ShiftDate IS NOT NULL AND c.ShiftDate Between @StartDate AND @EndDate)
+	--AND (c.DateEntered Between '2015-01-01' AND '2015-12-31')
+	AND (c.ReasonID IS NOT NULL And ReasonID IN(SELECT ReasonID FROM tbl_Reasons WHERE OpenShiftReasonType = 1))
+	AND (c.RegionID = 1 OR c.RegionID = 4 OR c.REgionID = 5 OR c.RegionID = 8)
+	AND c.EnteredBy <> 1111
+GrOUP BY c.ShiftDate, r.RegionName
+ORder BY c.SHiftDate
+
+
+SELECT *
+INTO #CallsPErOpen
+FROM #NumOfCalls
+UNION
+SELECT * 
+FROM #OpenShifts
+
+
+SELECT Convert(varchar,DATEADD(dd, 7-(DATEPART(dw, ShiftDate)), ShiftDate),101)As WeekendDate,
+RegionName,
+SUM(NumOfCalls) As NumOfCalls, 
+SUM(OpenShifts) As OpenShifts,
+ROUND(ISNULL(CONVERT(FLOAT, SUM(NumOfCalls))
+/NULLIF(CONVERT(FLOAT,SUM(OpenShifts)),0),0),2) AS CallsPerOpening
+FROM #CallsPErOpen
+Group By Convert(varchar,DATEADD(dd, 7-(DATEPART(dw, ShiftDate)), ShiftDate),101), RegionName
+ORDER BY RegionName, Convert(varchar,DATEADD(dd, 7-(DATEPART(dw, ShiftDate)), ShiftDate),101)
+
+
+------------- CLEAN UP--------------------
+DROP TABLE #NumOfCalls
+DROP TABLE #OpenShifts
+DROP TABLE #CallsPErOpen
+END
