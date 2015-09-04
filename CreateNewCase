@@ -1,0 +1,619 @@
+Imports System.Data.SqlClient
+Imports Infragistics.Web.UI.GridControls
+Imports System.Net.Mail
+Imports System.Web.Services
+
+Public Class CreateNewCase
+    Inherits System.Web.UI.Page
+    Private Shared configString As String = ConfigurationManager.ConnectionStrings("sccrmConnection").ConnectionString
+    Private Shared con As New SqlConnection(configString)
+
+    Private data As New Data()
+    Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
+        Try
+            '' if intial Page load
+            If Not IsPostBack Then
+                If Not Session("CaseNumber") Is Nothing Then
+                    'Dim hash As Hashtable = Session("CaseInfo")
+                    Dim caseInfo As HttpCookie = Request.Cookies("CaseInfo")
+                    If Session("CaseNumber") <> String.Empty Then
+
+                        ''Show Case form if Page Request if agent information is provided from another page
+                        
+                        Dim n As String = Session("Name")
+                        Dim eid As String = Session("EID")
+                        Dim phone As String = Session("Phone")
+                        Dim altPhone As String = Session("AltPhone")
+                        Dim region As String = Session("Region")
+                        Dim caseType As String = Session("CaseType")
+                        Dim caseTypeID As Integer = Session("CaseTypeID")
+                        Dim regionID As Integer = Nothing
+
+
+                        If eid <> String.Empty Then
+                            Name.Text = n
+                            empName.Value = n
+                            caseEID.Text = eid
+                            phoneOneText.Text = phone
+                            phoneTwoText.Text = altPhone
+
+                            TypeOfCase.Value = "Employee"
+                        ElseIf n <> "N/A" Then
+
+                            TypeOfCase.Value = "Plaza"
+                        Else
+                            TypeOfCase.Value = "Other"
+                        End If
+                        
+
+                    
+
+                        Dim _region As New Region()
+                        _region.Region_Name = region
+                        regionID = _region.GetRegionID()
+
+                        CreateNewCase(TypeOfCase.Value, caseType, caseTypeID, regionID, region, eid, n)
+
+                        searchFieldsetWrapper.CssClass = "four column fieldWrapper search hide"
+                        resultsWrapper.CssClass = "seven column search hide"
+                        caseInfoWrapper.CssClass = "nine column"
+                    Else
+                        searchFieldsetWrapper.CssClass = "four column fieldWrapper search"
+                        resultsWrapper.CssClass = "seven column search "
+                        caseInfoWrapper.CssClass = "nine column hide"
+                        caseHeader.CssClass = "hide"
+
+                        PopulateCaseSearch()
+                    End If
+                Else
+                    searchFieldsetWrapper.CssClass = "four column fieldWrapper search"
+                    resultsWrapper.CssClass = "seven column search "
+                    caseInfoWrapper.CssClass = "nine column hide"
+                    caseHeader.CssClass = "hide"
+
+                    PopulateCaseSearch()
+
+                End If
+                
+
+            End If
+        Catch ex As Exception
+            Response.Redirect("default.aspx?Error=true", True)
+        End Try
+
+        employeeSearchResultsGrid.Width = Unit.Percentage(100)
+        employeeSearchResultsGrid.Height = Unit.Pixel(250)
+        employeeSearchResultsGrid.BorderStyle = BorderStyle.None
+        employeeSearchResultsGrid.EmptyRowsTemplate = New EmtpyRowTemplate
+
+
+
+    End Sub
+    Private Sub PopulateCaseSearch()
+        Dim regions As New Region()
+        region.AppendDataBoundItems = True
+        region.Items.Insert(0, New ListItem("Please select a region", ""))
+        region.AppendDataBoundItems = True
+        region.DataSource = regions.GetActiveRegions()
+        region.DataTextField = "RegionName"
+        region.DataValueField = "RegionID"
+        region.DataBind()
+
+        Dim caseTypes As New CaseType()
+        caseType.AppendDataBoundItems = True
+        caseType.Items.Insert(0, New ListItem("Please select a case type", ""))
+        caseType.AppendDataBoundItems = True
+        caseType.DataSource = caseTypes.GetCaseTypes()
+        caseType.DataTextField = "CaseTypeName"
+        caseType.DataValueField = "CaseTypeID"
+        caseType.DataBind()
+    End Sub
+    Protected Sub newCaseSearchBtn_Click(sender As Object, e As EventArgs) Handles newCaseSearchBtn.Click
+
+        Try
+            If Page.IsValid Then
+                Dim emp As New Employee()
+
+                Dim parameterOne As String = String.Empty
+                Dim parameterTwo As String = String.Empty
+
+                Select Case newCaseSearchOptions.SelectedValue
+                    Case "Name"
+                        If fName.Text <> String.Empty Then
+                            parameterOne = fName.Text
+                        End If
+                        If lName.Text <> String.Empty Then
+                            parameterTwo = lName.Text
+                        End If
+                    Case "EID"
+                        parameterOne = eid.Text
+                    Case "PhoneOne"
+                        parameterOne = phoneOne.Text
+                    Case "PhoneTwo"
+                        parameterOne = phoneTwo.Text
+                End Select
+
+
+                Dim employeeTable As DataTable = emp.EmployeeSearch(region.SelectedValue, newCaseSearchOptions.SelectedValue, parameterOne, parameterTwo)
+
+                If employeeTable.Rows.Count > 0 Then
+                    If searchResultsMessage.Text <> String.Empty Then
+                        searchResultsMessage.Text = String.Empty
+                    End If
+                    If employeeSearchResultsGrid.Columns.Count = 0 Then
+                        For Each drcol As DataColumn In employeeTable.Columns
+                            Dim col As New BoundDataField
+                            col.DataFieldName = drcol.ColumnName
+                            col.Key = drcol.ColumnName
+
+                            Select Case drcol.ColumnName
+                                Case "EmployeeID"
+                                    col.Header.Text = "Employee ID"
+                                Case "FirstName"
+                                    col.Header.Text = "First Name"
+                                Case "LastName"
+                                    col.Header.Text = "Last Name"
+                                Case "MiddleInitial"
+                                    col.Header.Text = "MI"
+                                    col.Width = 50
+                                Case "Phone1"
+                                    col.Header.Text = "Phone 1"
+                                Case "Phone2"
+                                    col.Header.Text = "Phone 2"
+                            End Select
+
+                            employeeSearchResultsGrid.Columns.Add(col)
+                        Next
+                        employeeSearchResultsGrid.AutoGenerateColumns = False
+                    End If
+
+
+                    employeeSearchResultsGrid.DataSource = employeeTable
+                    employeeSearchResultsGrid.DataBind()
+                Else
+                    searchResultsMessage.Text = "No Employees found"
+                End If
+                'End Using
+            End If
+
+        Catch ex As Exception
+
+            Throw New Exception("An internal error has occurred. Error:" & ex.Message)
+        End Try
+
+    End Sub
+    Private Sub CreateNewCase(ByVal type As String, ByVal caseTypeValue As String, ByVal caseTypeID As String, ByVal regionID As String, ByVal regionValue As String, _
+                              ByVal eidValue As String, ByVal name As String)
+
+        Try
+            cTypeText.Text = caseTypeValue
+            caseRegion.Text = regionValue
+
+            ''Set form to retrieve additional information
+            If type = "Employee" Then
+                If empInfoWrapper.Visible = False Then
+                    empInfoWrapper.Visible = True
+                End If
+
+                If Integer.Parse(caseTypeID) <> 9 Then
+                    If positionWrapper.Visible = False Then
+                        positionWrapper.Visible = True
+                    End If
+
+                    '' Populate Position Drop Down
+                    If position.Items.Count > 0 Then
+                        position.Items.Clear()
+                    End If
+
+                    PopulatePositions(regionID)
+
+                    '' Populate Plaza Drop Down if Case Type is Not Request for work or Vacation
+                    If Integer.Parse(caseTypeID) <> 10 And Integer.Parse(caseTypeID) <> 8 Then
+                        If plaza.Items.Count > 0 Then
+                            plaza.Items.Clear()
+                        End If
+
+                        PopulatePlazas(regionID, eidValue, name)
+                    Else
+                        plaza.Items.Insert(0, New ListItem("N/A", "0"))
+                        plaza.Enabled = False
+
+                    End If
+                Else
+
+                    plaza.Items.Insert(0, New ListItem("N/A", "0"))
+                    plaza.Enabled = False
+
+                    position.Items.Insert(0, New ListItem("N/A", "0"))
+                    position.Enabled = False
+                End If
+
+
+                '' Hide Shift Drop COmpnonets if Case Type is not attendance related
+                If Integer.Parse(caseTypeID) > 7 Then
+                    shiftWrapper.Visible = False
+                    notifiedWrapper.Visible = False
+                Else
+                    If notifiedWrapper.Visible = False Then
+                        notifiedWrapper.Visible = True
+                    End If
+
+                    If shiftWrapper.Visible = False Then
+                        shiftWrapper.Visible = True
+                    End If
+
+                    If shiftTimeIn.Items.Count > 0 Then
+                        shiftTimeIn.Items.Clear()
+                    End If
+                    If shiftTimeOut.Items.Count > 0 Then
+                        shiftTimeOut.Items.Clear()
+                    End If
+
+                    shiftDate.Text = String.Empty
+
+                    PopulateShifts()
+                End If
+
+            ElseIf type = "Plaza" Then
+                empInfoWrapper.Visible = False
+
+                'If Integer.Parse(caseTypeID) = 6 Then
+                '    notifiedWrapper.Visible = True
+                'Else
+                notifiedWrapper.Visible = False
+                'End If
+
+                If Integer.Parse(caseTypeID) = 6 Then
+                    If positionWrapper.Visible = False Then
+
+                        positionWrapper.Visible = False
+                    End If
+
+                    PopulatePositions(regionID)
+
+                    If shiftWrapper.Visible = False Then
+                        shiftWrapper.Visible = True
+                    End If
+
+                    If shiftTimeIn.Items.Count > 0 Then
+                        shiftTimeIn.Items.Clear()
+                    End If
+                    If shiftTimeOut.Items.Count > 0 Then
+                        shiftTimeOut.Items.Clear()
+                    End If
+
+                    PopulateShifts()
+
+                Else
+                    shiftWrapper.Visible = False
+                    positionWrapper.Visible = False
+                End If
+
+
+
+                If plaza.Items.Count > 0 Then
+                    plaza.Items.Clear()
+                End If
+
+                PopulatePlazas(regionID, eidValue, name)
+
+            ElseIf type = "Other" Then
+                empInfoWrapper.Visible = False
+                positionWrapper.Visible = False
+                notifiedWrapper.Visible = False
+                shiftWrapper.Visible = False
+                plaza.Items.Insert(0, New ListItem("N/A", "0"))
+                plaza.Enabled = False
+
+            End If
+
+
+            If reason.Items.Count > 0 Then
+                reason.Items.Clear()
+            End If
+
+            '' Populate Reasons
+            Dim reasons As New Reason(caseTypeID)
+            reason.Items.Insert(0, New ListItem("Please select a reason", ""))
+            reason.AppendDataBoundItems = True
+            reason.DataSource = reasons.GetNewCaseReasons()
+            reason.DataTextField = "Reason"
+            reason.DataValueField = "ReasonID"
+            reason.DataBind()
+
+#If DEBUG Then
+            Dim caseNum As String = String.Empty
+#Else
+
+            '' Create New Case 
+            '' 
+            Dim userID As String = User.Identity.Name
+            Dim newCase As New _Case(regionID, caseTypeID, userID, eidValue)
+            newCase.CreateCase()
+
+
+            'Dim caseNum = String.Empty
+            Dim caseNum As String = newCase.Case_Number
+
+            '' Create cookie to store inital case information
+            Dim caseCookie As HttpCookie
+
+            If Not Request.Cookies("Case") Is Nothing Then
+                caseCookie = Request.Cookies("Case")
+            Else
+                caseCookie = New HttpCookie("Case")
+            End If
+
+            caseCookie.Values("CaseNumber") = caseNum
+            caseCookie.Values("RegionID") = regionID
+            caseCookie.Values("CaseTypeID") = caseTypeID
+            caseDate.Text = Format(Date.Now, "MMMM dd, yyyy HH:mm:ss tt")
+            caseCookie.Values("CaseDate") = caseDate.Text
+            caseCookie.Values("Type") = type
+            caseCookie.Values("EID") = eidValue
+            caseCookie.Expires = Date.Now.AddDays(1)
+            Response.Cookies.Add(caseCookie)
+#End If
+            '' Format Case Number
+            Dim CaseNumText As String = String.Empty
+
+            If caseNum.Length < 6 Then
+                For i As Integer = 0 To (6 - caseNum.Length - 1) Step 1
+                    CaseNumText = CaseNumText & "0"
+                Next
+            End If
+            caseNumber.Text = CaseNumText & caseNum
+            caseNumberField.Value = CaseNumText & caseNum
+           
+
+        Catch ex As Exception
+            Throw New Exception("An internal error has occurred: " & ex.Message)
+        End Try
+    End Sub
+    Private Sub PopulatePositions(ByVal RegionID As String)
+        Dim positions As New Position()
+        Dim table As New DataTable
+
+        If Integer.Parse(regionID) = 7 Then
+            table = positions.GetPositionByRegion(regionID)
+        Else
+            table = positions.GetPositionByRegion(DBNull.Value)
+        End If
+        position.Items.Insert(0, New ListItem("Please select a position", ""))
+        position.AppendDataBoundItems = True
+        position.DataSource = table
+        position.DataTextField = "Position"
+        position.DataValueField = "PositionID"
+        position.DataBind()
+    End Sub
+    Private Sub PopulatePlazas(ByVal RegionID As String, ByVal eidValue As String, ByVal name As String)
+        Dim plazas As New Plaza(RegionID)
+
+        plaza.Items.Insert(0, New ListItem("Please select a plaza", ""))
+        plaza.AppendDataBoundItems = True
+        plaza.DataSource = plazas.GetPlazaByRegion()
+        plaza.DataTextField = "PlazaName"
+        plaza.DataValueField = "PlazaID"
+        plaza.DataBind()
+
+        If Session("Plaza") <> String.Empty Then
+            If eidValue = String.Empty Then
+                plaza.SelectedItem.Text = Session("Plaza")
+            End If
+        End If
+    End Sub
+    Private Sub PopulateShifts()
+        Dim shifts As New Shift()
+        Dim shiftTable As DataTable = shifts.GetShifts()
+
+        shiftTimeIn.Items.Insert(0, New ListItem("Please select an in time", ""))
+        shiftTimeOut.Items.Insert(0, New ListItem("Please select an out time", ""))
+        shiftTimeIn.AppendDataBoundItems = True
+        shiftTimeOut.AppendDataBoundItems = True
+
+        shiftTimeIn.DataSource = shiftTable
+        shiftTimeIn.DataTextField = "Shift"
+        shiftTimeIn.DataValueField = "Shift"
+        shiftTimeIn.DataBind()
+
+        shiftTimeOut.DataSource = shiftTable
+        shiftTimeOut.DataTextField = "Shift"
+        shiftTimeOut.DataValueField = "Shift"
+        shiftTimeOut.DataBind()
+    End Sub
+
+    Protected Sub newCaseNextBtn_Click(sender As Object, e As EventArgs) Handles newCaseNextBtn.Click
+        CreateNewCase(TypeOfCase.Value, caseType.SelectedItem.Text, caseType.SelectedValue, region.SelectedValue, region.SelectedItem.Text, employeeID.Value, Nothing)
+    End Sub
+
+    Protected Sub caseSubmitBtn_Click(sender As Object, e As EventArgs) Handles caseSubmitBtn.Click
+        If Page.IsValid Then
+            Try
+                '' Create Case Instance
+                Dim _newCase As New _Case()
+
+                '' Retrieve Initial Case information 
+                Dim caseCookie As HttpCookie
+             
+                Dim type As String = String.Empty
+                If Not Request.Cookies("Case") Is Nothing Then
+                    caseCookie = Request.Cookies("Case")
+                    _newCase.Case_Number = caseCookie("CaseNumber")
+
+                    _newCase.Region_ID = caseCookie("RegionID")
+                    _newCase.Employee_ID = caseCookie("EID")
+                    _newCase.Case_TypeID = caseCookie("CaseTypeID")
+                    'caseTypeID = caseCookie("CaseTypeID")
+                    Type = caseCookie("Type")
+                    caseCookie.Expires = Date.Now.AddDays(-1)
+                    Response.Cookies.Add(caseCookie)
+                End If
+
+                '' Set User Id
+                _newCase.User_ID = User.Identity.Name
+
+                ''Set Case Date
+                _newCase.Case_Date = caseDate.Text
+
+                '' CHeck that CaseNumber is set
+                If _newCase.Case_Number = String.Empty Then
+                    If caseNumberField.Value <> String.Empty Then
+                        _newCase.Case_Number = caseNumberField.Value
+                    ElseIf caseNumber.Text <> String.Empty Then
+                        _newCase.Case_Number = caseNumber.Text
+                    Else
+                        Throw New Exception("Case Number field is null")
+                    End If
+                End If
+
+                '' Set Case Plaza
+                If plazaWrapper.Visible Then
+                    If plaza.SelectedValue <> "0" Then
+                        _newCase.Plaza_ID = plaza.SelectedValue
+                    End If
+                End If
+
+                '' Set Case Position
+                If positionWrapper.Visible Then
+                    If position.SelectedValue <> "0" Then
+                        _newCase.Position_ID = position.SelectedValue
+                    End If
+                End If
+
+                'Set Case Notification
+                If notifiedWrapper.Visible Then
+                    _newCase.Notified_ = notified.Text
+                End If
+
+                '' Set Case Shift information
+                If shiftWrapper.Visible Then
+
+                    _newCase.Shift_Date = shiftDate.Text
+                    _newCase.Shift_EndDate = shiftEndDate.Text
+
+                    Dim timeIn As String = shiftDate.Text & " " & shiftTimeIn.Text & ":00"
+                    _newCase.Shift_TimeIn = timeIn
+
+                    Dim timeOut As String = shiftEndDate.Text & " " & shiftTimeOut.Text & ":00"
+                    _newCase.Shift_TimeOut = timeOut
+
+                End If
+
+                '' Set Case Reason
+                _newCase.Reason_ID = reason.SelectedValue
+
+                '' Set Case Notes
+                _newCase.Notes_ = notes.Text
+
+                If Integer.Parse(_newCase.Case_TypeID) <= 7 Or Integer.Parse(_newCase.Case_TypeID) = 8 Then
+                    _newCase.Reason_ = reason.SelectedItem.Text
+                    _newCase.Plaza_ = plaza.SelectedItem.Text
+                    _newCase.Position_ = position.SelectedItem.Text
+                    _newCase.Employee_Name = empName.Value
+                End If
+
+                '' Complete Case
+                _newCase.COmpleteCase()
+
+                If Session IsNot Nothing Then
+                    Session.RemoveAll()
+                End If
+
+
+                '' Encrypt Case Number
+                ''Attach caseNumber as querystring parameter
+                '' redirect to edit case page
+                Dim enc As New EncryptString()
+                Response.Clear()
+
+                Dim caseUrl As String = "EditCase.aspx?caseNumber=" & HttpUtility.UrlEncode(enc.Encrpyt(caseNumber.Text)) & "&success=true"
+                Response.Redirect(caseUrl, False)
+
+            Catch ex As Exception
+                If ex.Message.IndexOf("Email was unable to be sent") > -1 Then
+                    Session("Error") = ex.Message
+
+                    If Request.Cookies("Case") IsNot Nothing Then
+                        Dim caseInfo As HttpCookie = Request.Cookies("Case")
+                        caseInfo.Expires = Date.Now.AddDays(-1)
+                        Response.Cookies.Add(caseInfo)
+                    End If
+                    Response.Clear()
+
+                    Dim enc As New EncryptString()
+
+
+                    Dim caseUrl As String = "EditCase.aspx?caseNumber=" & HttpUtility.UrlEncode(enc.Encrpyt(caseNumber.Text)) & "&success=false"
+                    Response.Redirect(caseUrl, False)
+                Else
+                    If Request.Cookies("Case") IsNot Nothing Then
+                        Dim caseInfo As HttpCookie = Request.Cookies("Case")
+                        caseInfo.Expires = Date.Now.AddDays(-1)
+                        Response.Cookies.Add(caseInfo)
+                    End If
+
+                    If Session IsNot Nothing Then
+                        Session.RemoveAll()
+                    End If
+                    shiftDate.Value = String.Empty
+                    shiftEndDate.Value = String.Empty
+                    newCaseSearchOptions.SelectedIndex = 0
+                    Throw New Exception("An internal error has occurred: " & ex.Message)
+                  End If
+
+            Finally
+                shiftDate.Value = String.Empty
+                shiftEndDate.Value = String.Empty
+                newCaseSearchOptions.SelectedIndex = 0
+            End Try
+        Else
+
+        End If
+    End Sub
+
+    Protected Sub exitSubmitBtn_Click(sender As Object, e As EventArgs) Handles exitSubmitBtn.Click
+        Try
+
+            Dim caseCookie As HttpCookie
+            Dim _newCase As New _Case()
+
+            '' Retrieve Case Number 
+            '' Destroy Case Cookie
+            If Not Request.Cookies("Case") Is Nothing Then
+                caseCookie = Request.Cookies("Case")
+                _newCase.Case_Number = caseCookie("CaseNumber")
+                caseCookie.Expires = Date.Now.AddDays(-1)
+                Response.Cookies.Add(caseCookie)
+            Else
+                If caseNumberField.Value <> String.Empty Then
+                    _newCase.Case_Number = caseNumberField.Value
+                ElseIf caseNumber.Text Then
+                    _newCase.Case_Number = caseNumber.Text
+                Else
+                    Throw New Exception("Case Number field is null")
+                End If
+            End If
+            _newCase.User_ID = User.Identity.Name
+
+            '' Destroy Cookie Created From Edit Case page to create additional cases with current information
+            If Request.Cookies("CaseInfo") IsNot Nothing Then
+                Dim caseInfo As HttpCookie = Request.Cookies("CaseInfo")
+                caseInfo.Expires = Date.Now.AddDays(-1)
+                Response.Cookies.Add(caseInfo)
+            End If
+
+            _newCase.ExitCase()
+
+            Response.Redirect("default.aspx", False)
+
+        Catch ex As Exception
+            Response.Redirect("default.aspx?CloseCase=false", False)
+        End Try
+    End Sub
+
+    Protected Sub newCaseBackBtn_Click(sender As Object, e As EventArgs) Handles newCaseBackBtn.Click
+        Response.Redirect("default.aspx", False)
+    End Sub
+
+   
+End Class
