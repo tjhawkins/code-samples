@@ -1,0 +1,1590 @@
+<%@ Page Title="" Language="vb" AutoEventWireup="false" MasterPageFile="~/SCCRM.Master" CodeBehind="EditCase.aspx.vb" Inherits="SCCRM.EditCase" %>
+
+<%@ Register Assembly="Infragistics4.WebUI.WebHtmlEditor.v13.1, Version=13.1.20131.2107, Culture=neutral, PublicKeyToken=7dd5c3163f2cd0cb" Namespace="Infragistics.WebUI.WebHtmlEditor" TagPrefix="ighedit" %>
+
+<%@ Register Assembly="Infragistics4.Web.v13.1, Version=13.1.20131.2107, Culture=neutral, PublicKeyToken=7dd5c3163f2cd0cb" Namespace="Infragistics.Web.UI.EditorControls" TagPrefix="ig" %>
+
+<%@ Register Assembly="Infragistics4.Web.v13.1, Version=13.1.20131.2107, Culture=neutral, PublicKeyToken=7dd5c3163f2cd0cb" Namespace="Infragistics.Web.UI.GridControls" TagPrefix="ig" %>
+
+<asp:Content ID="Content1" ContentPlaceHolderID="head" runat="server">
+    <link href="Styles/Themes/Message/jquery-ui-1.8.23.custom.css" rel="stylesheet" />
+</asp:Content>
+<asp:Content ID="Content2" ContentPlaceHolderID="ContentPlaceHolder" runat="server">
+    <!----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+        Hidden Fields Section
+
+   ------------------------------------------------------------------------------------------------------------------------------------------------------------>
+
+    <asp:HiddenField runat="server" ID="employeeID" ClientIDMode="Static" />
+    <asp:HiddenField runat="server" ID="ccaseName" ClientIDMode="Static" />
+    <asp:HiddenField runat="server" ID="caseShift" ClientIDMode="Static" />
+    <asp:HiddenField runat="server" ID="fpFirstName" ClientIDMode="Static" />
+    <asp:HiddenField runat="server" ID="fpLastName" ClientIDMode="Static" />
+    <asp:HiddenField runat="server" ID="fpMI" ClientIDMode="Static" />
+    <asp:HiddenField runat="server" ID="followUpID" ClientIDMode="Static" />
+    <asp:HiddenField runat="server" ID="caseTypeName" ClientIDMode="Static" />
+    <asp:HiddenField runat="server" ID="editFollowUpID" ClientIDMode="Static" />
+    <asp:HiddenField runat="server" ID="endDate" ClientIDMode="Static" />
+    <asp:HiddenField runat="server" ID="edit" ClientIDMode="Static" />
+    <asp:HiddenField runat="server" ID="editFollowUp" ClientIDMode="Static" />
+    <!----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+     Begin Update Panel
+
+    ------------------------------------------------------------------------------------------------------------------------------------------------------------>
+    <asp:UpdatePanel runat="server" ID="contentUpdate" ClientIDMode="Static">
+        <ContentTemplate>
+            <asp:Panel runat="server" ID="editCaseMessageWrapper" ClientIDMode="Static" CssClass="twelve column errorMessageWrapper">
+                <div id="errorMessagePanel" class="twelve column alert-box alert">
+                    <asp:Label runat="server" ID="errorMessage" ClientIDMode="Static" CssClass=""></asp:Label>
+                </div>
+                <div id="editCaseSuccessPanel" class="twelve column alert-box success">
+                    <asp:Label runat="server" ID="successMessage" ClientIDMode="Static" CssClass=""></asp:Label>
+                </div>
+            </asp:Panel>
+            <asp:Panel runat="server" ID="CaseTextWrapper" ClientIDMode="Static" CssClass="twelve" Visible=" false">
+                <h1 id="caseText" class="hide">Case Number:<asp:Label runat="server" ID="caseNumber" ClientIDMode="Static" CssClass="caseNumber">
+                    <asp:Label runat="server" ID="followUpDate" ClientIDMode="Static" CssClass=""></asp:Label></asp:Label></h1>
+                <p id="dateText" class="hide">
+                    Created:
+                    <asp:Label runat="server" ID="createdDate" ClientIDMode="Static" CssClass=""></asp:Label>
+                </p>
+            </asp:Panel>
+            <!----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+     Begin Case Information Wrapper
+
+   ------------------------------------------------------------------------------------------------------------------------------------------------------------>
+            <div id="infoWrapper" class="clear hide">
+                <div id="leftPanel" class="four column ">
+                    <div id="editCaseBtnPanel" class="twelve panel">
+                        <div id="editCaseBTnFirstWrapper" class="four column">
+                            <asp:Button runat="server" ID="newCase" ClientIDMode="Static" CssClass="small button" Text="New Case"></asp:Button>
+                            <asp:Button runat="server" ID="sendTemplateBtn" ClientIDMode="Static" CssClass="small button bottomButton" Text="Resend"></asp:Button>
+
+                        </div>
+                        <div id="editCaseBtnSecondWrapper" class="four column">
+                            <asp:Button runat="server" ID="editCaseBtn" ClientIDMode="Static" CssClass="small button" Text="Edit Case"></asp:Button>
+                            <button id="escButton" class="small button bottomButton alert">Escalate</button>
+                        </div>
+                        <div id="editCaseBtnThirdWrapper" class="four column">
+                            <asp:Button runat="server" ID="addFollowupBtn" ClientIDMode="Static" CssClass="small button" Text="Add Follow Up"></asp:Button>
+                            <asp:Button runat="server" ID="closeCaseBtn" ClientIDMode="Static" CssClass="small button bottomButton alert" Text="Close Case" />
+                        </div>
+                        <div class="clear"></div>
+                    </div>
+                    <asp:LoginView runat="server" ID="assignLoginView" ClientIDMode="Static">
+                        <RoleGroups>
+                            <asp:RoleGroup Roles="Admin, Manager, Supervisor, Team Lead">
+                                <ContentTemplate>
+                                   <asp:Panel runat="server" ID="assignWrapper" ClientIDMode="Static" CssClass="twelve">
+                                     <fieldset class="clear">
+                                        <legend>Assign CSR</legend>
+                                        <asp:DropDownList runat="server" ID="agents" ClientIDMode="Static" CssClass="twelve"></asp:DropDownList>
+                                         <asp:Button runat="server" ID="agentsApplyBtn" ClientIDMode="Static" CssClass="tiny button" Text="Assign" OnClick="agentsApplyBtn_Click"></asp:Button>
+                                    </fieldset>
+                                       </asp:Panel>
+                                </ContentTemplate>
+                            </asp:RoleGroup>
+                        </RoleGroups>
+                    </asp:LoginView>
+                    <fieldset class="clear">
+                        <legend>Case Information</legend>
+                        <div id="caseInfoWrapper twelve">
+                            <div class="twelve informationSection">
+                                <div class="four column">
+                                    <asp:Label runat="server" ID="CaseNumbetText" CssClass="blockLabel" ClientIDMode="Static"><strong>Case Number:
+                                        <br />
+                                    </strong>
+                                        <asp:Label runat="server" ID="cNum" ClientIDMode="Static" CssClass="blockText"></asp:Label></asp:Label>
+                                </div>
+                                <asp:Panel runat="server" ID="nameTextWrapper" ClientIDMode="Static" CSSClass="four column">
+                                    <asp:Label runat="server" ID="NameText" ClientIDMode="Static" CssClass="blockLabel"><strong>
+                                        <asp:Label runat="server" ID="nameTextLabel" ClientIDMode="Static">Name:</asp:Label>
+                                    </strong>
+                                        <asp:Label runat="server" ID="name" ClientIDMode="Static" CssClass="blockText"></asp:Label></asp:Label>
+                                </asp:Panel>
+                                <div class="four column">
+                                    <asp:Label runat="server" ID="EmpoyeeIDText" ClientIDMode="Static" CssClass="blockLabel"><strong>Employee ID:
+                                        <br />
+                                    </strong>
+                                        <asp:Label runat="server" ID="eid" ClientIDMode="Static" CssClass="blockText"></asp:Label></asp:Label>
+                                </div>
+
+                                <div class="clear"></div>
+                            </div>
+                            <asp:Panel runat="server" ID="contactWrapper" ClientIDMode="Static" CssClass="twelve informationSection">
+                                <div class="four column">
+                                    <asp:Label runat="server" ID="phoneText" ClientIDMode="Static" CssClass="blockLabel"><strong>Phone 1:
+                                        <br />
+                                    </strong>
+                                        <asp:Label runat="server" ID="phone" ClientIDMode="Static" CssClass="blockText"></asp:Label></asp:Label>
+                                </div>
+                                <div class="four column">
+                                    <asp:Label runat="server" ID="altPhoneText" ClientIDMode="Static" CssClass="blockLabel"><strong>Phone 2:
+                                        <br />
+                                    </strong>
+                                        <asp:Label runat="server" ID="altPhone" ClientIDMode="Static" CssClass="blockText"></asp:Label></asp:Label>
+                                </div>
+                                <div class="four column">
+                                </div>
+                                <div class="clear"></div>
+                            </asp:Panel>
+                            <div class="twelve informationSection">
+                                <div class="four column">
+                                    <asp:Label runat="server" ID="regionText" ClientIDMode="Static" CssClass="blockLabel"><strong>Region:
+                                        <br />
+                                    </strong>
+                                        <asp:Label runat="server" ID="region" ClientIDMode="Static" CssClass="blockText"></asp:Label></asp:Label>
+                                </div>
+                                <asp:Panel runat="server" ID="plazaTextWrapper" ClientIDMode="Static" CSSClass="four column">
+                                    <asp:Label runat="server" ID="plazaText" ClientIDMode="Static" CssClass="blockLabel"><strong>Plaza:
+                                        <br />
+                                    </strong>
+                                        <asp:Label runat="server" ID="plaza" ClientIDMode="Static" CssClass="blockText"></asp:Label></asp:Label>
+                                </asp:Panel>
+                                <div class="four column">
+                                    <asp:Label runat="server" ID="positionText" CssClass="blockLabel" ClientIDMode="Static"><strong>Position:
+                                        <br />
+                                    </strong>
+                                        <asp:Label runat="server" ID="position" ClientIDMode="Static" CssClass="blockText"></asp:Label></asp:Label>
+                                </div>
+                                <div class="four column">
+                                </div>
+                                <div class="clear"></div>
+                            </div>
+                            <div class="twelve informationSection">
+                                <div class="four column">
+                                    <asp:Label runat="server" ID="caseTypeText" CssClass="blockLabel" ClientIDMode="Static"><strong>Case Type:
+                                        <br />
+                                    </strong>
+                                        <asp:Label runat="server" ID="caseType" ClientIDMode="Static" CssClass="blockText"></asp:Label></asp:Label>
+                                </div>
+                                <div class="four column">
+                                    <asp:Label runat="server" ID="reasonText" CssClass="blockLabel" ClientIDMode="Static"><strong>Reason:
+                                        <br />
+                                    </strong>
+                                        <asp:Label runat="server" ID="reason" ClientIDMode="Static" CssClass="blockText"></asp:Label></asp:Label>
+                                </div>
+                                <div class="four column">
+                                    <asp:Label runat="server" ID="notifiedText" CssClass="blockLabel" ClientIDMode="Static"><strong>Notified:
+                                        <br />
+                                    </strong>
+                                        <asp:Label runat="server" ID="notified" ClientIDMode="Static" CssClass="blockText"></asp:Label></asp:Label>
+                                </div>
+                                <div class="clear"></div>
+                            </div>
+                            <asp:Panel runat="server" ID="shiftWrapper" ClientIDMode="Static" CssClass="twelve informationSection">
+                                <div class="four column">
+                                    <asp:Label runat="server" ID="ShiftDateText" CssClass="blockLabel" ClientIDMode="Static"><strong>Shift Date:
+                                        <br />
+                                    </strong>
+                                        <asp:Label runat="server" ID="shiftDate" ClientIDMode="Static" CssClass="blockText"></asp:Label></asp:Label>
+                                </div>
+                                <div class="four column">
+                                    <asp:Label runat="server" ID="inTimeText" CssClass="blockLabel" ClientIDMode="Static"><strong>Shift Time In:
+                                        <br />
+                                    </strong>
+                                        <asp:Label runat="server" ID="inTime" ClientIDMode="Static" CssClass="blockText"></asp:Label></asp:Label>
+                                </div>
+                                <div id="TimeoutWrapper" class="four column">
+
+
+                                    <asp:Label runat="server" ID="outTimeText" CssClass="blockLabel" ClientIDMode="Static"><strong>Shift Time Out:
+                                        <br />
+                                    </strong>
+                                        <asp:Label runat="server" ID="outTime" ClientIDMode="Static" CssClass="blockText"></asp:Label></asp:Label>
+                                </div>
+                                <div class="clear"></div>
+                            </asp:Panel>
+                            <div class="twelve ">
+                                <div class="four column">
+                                    <asp:Label runat="server" ID="statusText" CssClass="blockLabel" ClientIDMode="Static"><strong>Status:
+                                        <br />
+                                    </strong>
+                                        <asp:Label runat="server" ID="status" ClientIDMode="Static" CssClass=""></asp:Label></asp:Label>
+                                </div>
+                                <div class="four column">
+                                    <asp:Label runat="server" ID="dateEnteredText" CssClass="blockLabel" ClientIDMode="Static"><strong>Created:
+                                        <br />
+                                    </strong>
+                                        <asp:Label runat="server" ID="dateEntered" ClientIDMode="Static" CssClass="blockText "></asp:Label></asp:Label>
+                                </div>
+                                <div class="four column">
+                                    <asp:Label runat="server" ID="createdByLabel" CssClass="blockLabel" ClientIDMode="Static"><strong>Created by:
+                                        <br />
+                                    </strong>
+                                        <asp:Label runat="server" ID="createdBy" ClientIDMode="Static" CssClass="blockText"></asp:Label></asp:Label>
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </fieldset>
+
+                    <p class="fiedlsetTitle">Case Notes</p>
+                    <div id="notesFieldSet">
+                        <div class="twelve ">
+                            <asp:Label runat="server" ID="notes" ClientIDMode="Static" CssClass="blockText"></asp:Label>
+                        </div>
+                    </div>
+                </div>
+                <div id="rightPanel" class="eight column ">
+
+                    <fieldset id="followUPFieldset">
+                        <legend>Follow Ups</legend>
+                        <div id="followUpButtonWrapper" class="twelve column panel">
+                            <asp:Button runat="server" ID="sendFollowUpBtn" ClientIDMode="Static" CssClass="small button" Text="Resend Follow Up"></asp:Button>
+                            <asp:Button runat="server" ID="editFollowUpBtn" ClientIDMode="Static" CssClass="small button" Text="Edit Follow Up"></asp:Button>
+                        </div>
+                        <asp:Panel runat="server" ID="followUpMessageTextWrapper" ClientIDMode="Static" CssClass="message twelve clear">
+                            <p id="P4" class="ui-state-highlight">Click desired row to select/unselect a Follow Up.</p>
+                        </asp:Panel>
+                        <div id="followUpGridWrapper" class="twelve">
+                            <ig:WebDataGrid ID="follwoUpGrid" ClientIDMode="Static" ItemCssClass="pointer" CssClass="grid" runat="server" StyleSetName="IG" EnableDataViewState="True">
+                                <ClientEvents Click="followUpGrid_Grid_Click" />
+                                <Behaviors>
+                                    <ig:Selection CellClickAction="Row" RowSelectType="Single" SelectedCellCssClass="activeRow">
+                                    </ig:Selection>
+                                </Behaviors>
+                            </ig:WebDataGrid>
+                        </div>
+                    </fieldset>
+                    <asp:Panel runat="server" ID="floatersWrapper" ClientIDMode="Static">
+                        <fieldset id="floaterFieldset">
+                            <legend>Floater List</legend>
+                            <div id="Div4" class="twelve">
+                                <ig:WebDataGrid ID="floaterList" ClientIDMode="Static" ItemCssClass="pointer" CssClass="grid" runat="server" StyleSetName="IG" EnableDataViewState="True">
+                                    <Behaviors>
+                                        <ig:Paging PagerMode="NextPreviousFirstLast" PageSize ="15"></ig:Paging>
+                                    </Behaviors>
+                                </ig:WebDataGrid>
+                            </div>
+                        </fieldset>
+                    </asp:Panel>
+                </div>
+            </div>
+     <!----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+      Begin Case Edit Wrapper
+
+     ------------------------------------------------------------------------------------------------------------------------------------------------------------>
+            <div id="caseEditWrapper" class="eight column hide">
+                <fieldset id="caseFieldset" class="twelve">
+                    <legend>Case Information</legend>
+                    
+                    <asp:Panel runat="server" ID="caseEmpInfoWraper" ClientIDMode="Static" CssClass="three column empInfoWrapper">
+                        <asp:Panel runat="server" ID="caseEmployeeInfo" ClientIDMode="Static" CssClass="tweleve  empInfoPanel">
+                            <div class="twelve ">
+                                <asp:Label runat="server" ID="editNameText" ClientIDMode="Static" CssClass="editForm blockLabel"><strong>
+                                    <asp:Label runat="server" ID="editNameLabel" ClientIDMode="Static">Name:</asp:Label>
+                                </strong>
+                                    <asp:Label runat="server" ID="editName" ClientIDMode="Static" CssClass="blockText"></asp:Label></asp:Label>
+                            </div>
+                            <div class="twelve">
+                                <asp:Label runat="server" ID="editEIDText" ClientIDMode="Static" CssClass="editForm blockLabel"><strong>
+                                    <asp:Label runat="server" ID="editEIDLabel" ClientIDMode="Static">EmployeeID:</asp:Label>
+                                </strong>
+                                    <asp:Label runat="server" ID="editEID" ClientIDMode="Static" CssClass="blockText"></asp:Label></asp:Label>
+                            </div>
+                            <div class="twelve">
+                                <asp:Label runat="server" ID="editPhoneText" ClientIDMode="Static" CssClass="editForm blockLabel"><strong>
+                                    <asp:Label runat="server" ID="editPhoneLabel" ClientIDMode="Static">Phone 1:</asp:Label>
+                                </strong>
+                                    <asp:Label runat="server" ID="editPhone" ClientIDMode="Static" CssClass="editForm blockText"></asp:Label></asp:Label>
+                            </div>
+                            <div class="twelve">
+                                <asp:Label runat="server" ID="editAltPhoneText" ClientIDMode="Static" CssClass="editForm blockLabel"><strong>
+                                    <asp:Label runat="server" ID="editAltPhoneLabel" ClientIDMode="Static">Phone 2:</asp:Label>
+                                </strong>
+                                    <asp:Label runat="server" ID="editAltPhone" ClientIDMode="Static" CssClass="blockText"></asp:Label></asp:Label>
+                            </div>
+                        </asp:Panel>
+                    </asp:Panel>
+                    <asp:Panel runat="server" ID="editCaseInfo" ClientIDMode="Static" CssClass="nine column formSection">
+                       <asp:Panel runat="server" ID="caseStatusWrapper" ClientIDMode="Static" CssClass="twelve has-dropdown formDDLWrapper">
+                        <asp:Label runat="server" ID="editStatusLabel" ClientIDMode="Static" CssClass="formLabel">Status</asp:Label>
+                        <div class="clear"></div>
+                        <asp:DropDownList runat="server" ID="editStatus" ClientIDMode="Static" CssClass="formDDL"></asp:DropDownList>
+                    </asp:Panel>
+                         <div id="editRegionWrapper" class="twelve has-dropdown formDDLWrapper">
+                            <asp:Label runat="server" ID="regionLabel" ClientIDMode="Static" CssClass="formLabel">Region<span class="required">*</span>
+                                <asp:RequiredFieldValidator runat="server" ID="regionValidator" ClientIDMode="Static" CssClass="formValidator" ControlToValidate="editRegion" ValidationGroup="caseInfo" Text=" !A region is not selected."></asp:RequiredFieldValidator>
+                            </asp:Label>
+                            <div class="clear"></div>
+                            <asp:DropDownList runat="server" ID="editRegion" ClientIDMode="Static" CssClass="formDDL" Enabled="false"></asp:DropDownList>
+                        </div>
+                        <asp:Panel runat="server" ID="plazaWrapper" ClientIDMode="Static" CssClass="twelve has-dropdown formDDLWrapper">
+                            <asp:Label runat="server" ID="plazaLabel" ClientIDMode="Static" CssClass="formLabel">Plaza<span class="required">*</span>
+                                <asp:RequiredFieldValidator runat="server" ID="plazaValidator" ClientIDMode="Static" CssClass="formValidator" ControlToValidate="editPlaza" ValidationGroup="caseInfo" Text="! A plaza is not selected."></asp:RequiredFieldValidator>
+                            </asp:Label>
+                            
+                            <div class="clear"></div>
+                            <asp:DropDownList runat="server" ID="editPlaza" ClientIDMode="Static" CssClass="formDDL"></asp:DropDownList>
+                        </asp:Panel>
+                        <asp:Panel runat="server" ID="positionWrapper" ClientIDMode="Static" CssClass="twelve has-dropdown formDDLWrapper">
+                            <asp:Label runat="server" ID="positionLabel" ClientIDMode="Static" CssClass="formLabel">Position<span class="required">*</span>
+                                <asp:RequiredFieldValidator runat="server" ID="positionValidator" ClientIDMode="Static" CssClass="formValidator" ControlToValidate="editPosition" ValidationGroup="caseInfo" Text="! A position is not selected."></asp:RequiredFieldValidator>
+                            </asp:Label>
+                            
+                            <div class="clear"></div>
+                            <asp:DropDownList runat="server" ID="editPosition" ClientIDMode="Static" CssClass="formDDL"></asp:DropDownList>
+                        </asp:Panel>
+                        <asp:Panel runat="server" ID="notifiedWrapper" ClientIDMode="Static" CssClass="twelve">
+                            <asp:Label runat="server" ID="notifiedLabel" ClientIDMode="Static" CssClass="formLabel">Notified<span class="required">*</span>
+                                <asp:RequiredFieldValidator runat="server" ID="notifiedValidator" ClientIDMode="Static" CssClass="formValidator" ControlToValidate="editNotified" ValidationGroup="caseInfo" Display="Dynamic" Text="! A name is required."></asp:RequiredFieldValidator>
+                                <asp:RegularExpressionValidator runat="server" ID="notifiedExpValidator" CssClass="formValidator" ClientIDMode="Static" ControlToValidate="editNotified" ValidationGroup="caseInfo" Display="Dynamic" ValidationExpression="^[a-zA-Z '-/]*$" Text="! Name is invalid."></asp:RegularExpressionValidator>
+                            </asp:Label>
+                            
+                            <div class="clear"></div>
+                            <asp:TextBox runat="server" ID="editNotified" ClientIDMode="Static" CssClass="caseInfo formField"></asp:TextBox>
+                        </asp:Panel>
+                    </asp:Panel>
+                    <div id="editCaseInfoWrapper" class="twelve clear borderTop">
+                        <div id="caseTypeWrapper" class="six column has-dropdown formDDLWrapper">
+                            <asp:Label runat="server" ID="caseTypeLabel" ClientIDMode="Static" CssClass="formLabel">Case Type<span class="required">*</span>
+                                <asp:RequiredFieldValidator runat="server" ID="caseTypeValidator" ClientIDMode="Static" CssClass="formValidator" ControlToValidate="editCaseType" ValidationGroup="caseInfo" Text="! A case type is not selected."></asp:RequiredFieldValidator>
+                            </asp:Label>
+                            <div class="clear"></div>
+                            <asp:DropDownList runat="server" ID="editCaseType" ClientIDMode="Static" CssClass="formDDL" Enabled="False"></asp:DropDownList>
+                        </div>
+                        <div id="reasonWrapper" class="six column has-dropdown endField formDDLWrapper">
+                            <asp:Label runat="server" ID="reasonLabel" ClientIDMode="Static" CssClass="formLabel">Reason<span class="required">*</span>
+                                <asp:RequiredFieldValidator runat="server" ID="reasonValidator" ClientIDMode="Static" CssClass="formValidator" ControlToValidate="editReason" ValidationGroup="caseInfo" Text="! A reason is not selected."></asp:RequiredFieldValidator>
+                            </asp:Label>
+                            
+                            <div class="clear"></div>
+                            <asp:DropDownList runat="server" ID="editReason" ClientIDMode="Static" CssClass="formDDL"></asp:DropDownList>
+                        </div>
+                    </div>
+                    <div id="additionalCaseInfo" class="twelve clear">
+                        <asp:Panel runat="server" ID="editShiftWrapper" ClientIDMode="Static" CssClass="twelve">
+                            <div class="twleve shiftInWrapper">
+                                <div class="six column shiftDateWrapper">
+                                    <asp:Label runat="server" ID="shiftDateLabel" ClientIDMode="Static" CssClass="formLabel">Shift Date<span class="required">*</span>
+                                        <asp:RequiredFieldValidator runat="server" ID="shiftDateRequiredValidator" ClientIDMode="Static" CssClass="formValidator" ControlToValidate="editShiftDate" ValidationGroup="caseInfo" Display="Dynamic" Text="! A date is required."></asp:RequiredFieldValidator>
+                                        <asp:RegularExpressionValidator runat="server" ID="shiftDateExpValidator" CssClass="formValidator" ClientIDMode="Static" ControlToValidate="editShiftDate" ValidationGroup="caseInfo" Display="Dynamic" ValidationExpression="^(0[1-9]|1[012])[- /.](0[1-9]|[12][0-9]|3[01])[- /.](19|20)\d\d$" Text="!  Date is invalid."></asp:RegularExpressionValidator>
+                                        <asp:Label runat="server" ID="shiftDateValidator" ClientIDMode="Static" CSSClass="formValidator errorText requiredFieldValidator">! Shift Date is after Shift End Date</asp:Label>
+                                    </asp:Label>
+                                    
+                                    <div class="clear"></div>
+                                    <ig:WebDatePicker ID="editShiftDate" ClientIDMode="Static" CssClass="dateField formField" runat="server" DropDownCalendarID="editShiftDateCalendar" TabIndex="5" StyleSetName="IG" OpenCalendarOnFocus="True" EditModeFormat="MM/dd/yyyy"></ig:WebDatePicker>
+                                    <ig:WebMonthCalendar ID="editShiftDateCalendar" CssClass="calendar" StyleSetName="IG" runat="server"></ig:WebMonthCalendar>
+                                </div>
+                                <div class="six shiftTimeWrapper column has-dropdown">
+                                    <asp:Label runat="server" ID="shiftTimeInLabel" ClientIDMode="Static" CssClass="formLabel">Shift Time In<span class="required">*</span></asp:Label>
+                                    <asp:RequiredFieldValidator runat="server" ID="shiftTimeIRequirednValidator" ClientIDMode="Static" CssClass="formValidator" ControlToValidate="editShiftTimeIn" ValidationGroup="caseInfo" Display="Dynamic" Text="! A time is not selected."></asp:RequiredFieldValidator>
+                                    <asp:Label runat="server" ID="shiftTimeInValidator" ClientIDMode="Static" CSSClass="formValidator errorText requiredFieldValidator"></asp:Label>
+                                    <div class="clear"></div>
+                                    <asp:DropDownList runat="server" ID="editShiftTimeIn" ClientIDMode="Static" CssClass="caseInfo formDDL"></asp:DropDownList>
+                                </div>
+                                <div class="clear"></div>
+                            </div>
+                            <div class="twelve shiftEndWrapper">
+                                <div class="six column shiftDateWrapper">
+                                    <asp:Label runat="server" ID="shiftEndDateLabel" ClientIDMode="Static" CssClass="formLabel">Shift End Date<span class="required">*</span></asp:Label>
+                                    <asp:RequiredFieldValidator runat="server" ID="shiftEndDateRequiredValidator" ClientIDMode="Static" CssClass="formValidator" ControlToValidate="editShiftEndDate" ValidationGroup="caseInfo" Display="Dynamic" Text="! A date is required."></asp:RequiredFieldValidator>
+                                        <asp:RegularExpressionValidator runat="server" ID="shiftEndDateExpValidator" CssClass="formValidator" ClientIDMode="Static" ControlToValidate="editShiftEndDate" ValidationGroup="caseInfo" Display="Dynamic" ValidationExpression="^(0[1-9]|1[012])[- /.](0[1-9]|[12][0-9]|3[01])[- /.](19|20)\d\d$" Text="! Date is invalid."></asp:RegularExpressionValidator>
+                                        <asp:Label runat="server" ID="shiftEndDateValidator" ClientIDMode="Static" CSSClass="formValidator errorText requiredFieldValidator"></asp:Label> 
+                                    <div class="clear"></div>
+                                    <ig:WebDatePicker ID="editShiftEndDate" ClientIDMode="Static" CssClass="dateField formField" runat="server" DropDownCalendarID="editShiftEndDateCalendar" TabIndex="5" StyleSetName="IG" OpenCalendarOnFocus="True" EditModeFormat="MM/dd/yyyy"></ig:WebDatePicker>
+                                    <ig:WebMonthCalendar ID="editShiftEndDateCalendar" CssClass="calendar" StyleSetName="IG" runat="server"></ig:WebMonthCalendar>
+                                </div>
+
+                                <div class="six shiftTimeWrapper column has-dropdown">
+                                    <asp:Label runat="server" ID="shiftTimeOutLabel" ClientIDMode="Static" CssClass="formLabel">Shift Time Out<span class="required">*</span></asp:Label>
+                                    <asp:RequiredFieldValidator runat="server" ID="shiftTimeOutValidator" ClientIDMode="Static" CssClass="formValidator" ControlToValidate="editShiftTimeOut" ValidationGroup="caseInfo" Text="! A time is not selected."></asp:RequiredFieldValidator>
+                                    <div class="clear"></div>
+                                    <asp:DropDownList runat="server" ID="editShiftTimeOut" ClientIDMode="Static" CssClass="caseInfo formDDL" TabIndex="7"></asp:DropDownList>
+                                </div>
+                                <div class="clear"></div>
+                            </div>
+
+                        </asp:Panel>
+                        <div class="clear"></div>
+                        <div id="editFormNotesWrapper" class="twelve">
+                            <asp:Label runat="server" ID="notesLabel" ClientIDMode="Static" CssClass="formLabel">Notes(Required when specified)
+                                <asp:Label runat="server" ID="notesValidator" ClientIDMode="Static" CSSClass="formValidator errorText requiredFieldValidator">! Notes are required ( if disregarding or case was done in error, please provide additional notes.)</asp:Label>
+                            </asp:Label>
+                            <asp:TextBox runat="server" ID="editNotes" ClientIDMode="Static" CssClass="caseInfo formField formTextArea" TextMode="MultiLine"></asp:TextBox>
+                        </div>
+                        <asp:Panel runat="server" ID="caseErrorMessageWrapper" ClientIDMode="Static" CssClass="message twelve clear">
+                            <p id="P5" class="ui-state-highlight">Select <strong>ONLY</strong> if case was created in error and needs to be closed.</p>
+                        </asp:Panel>
+                        <div id="caseErrorWrapper" class="twelve errorFieldWrapper">
+                            <asp:Label runat="server" ID="caseErrorLabel" ClientIDMode="Static" CssClass="formLabel">Case Error</asp:Label>
+                            <asp:CheckBox runat="server" ID="caseError" ClientIDMode="Static" CssClass="formCheckbox"></asp:CheckBox>
+                        </div>
+                    </div>
+                    <div id="Div1" class="twelve">
+                        <asp:Button runat="server" ID="editCaseBackBtn" ClientIDMode="Static" CssClass="medium button rightButton" Text="Back"></asp:Button>
+                        <asp:Button ID="caseSubmitBtn" CssClass="medium button" ClientIDMode="Static" runat="server" Text="Save" ValidationGroup="caseInfo" />
+                    </div>
+                </fieldset>
+
+            </div>
+            <!----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+                   Follow Up Wrapper
+
+            ------------------------------------------------------------------------------------------------------------------------------------------------------------>
+
+            <div id="followUpWrapper" class="hide">
+                <!----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+               Begin Follow Up Search Wrapper
+
+           ------------------------------------------------------------------------------------------------------------------------------------------------------------>
+                <div id="searchFieldsetWrapper" class="four column fieldWrapper search">
+                    <fieldset id="regionFieldset">
+                        <legend>Begin Follow Up Case</legend>
+                        <div class="message twelve clear">
+                            <p id="newCaseSearchMessage" class="ui-state-highlight">Please select a Case Type, For shift coverages, please choose a region, search option, and enter the caller's information.</p>
+                        </div>
+                        <div id="newCaseSearch" class="twelve column">
+                            <div class="twelve  has-dropdown formDDLWrapper">
+                                <asp:Label runat="server" ID="followUpSearchCaseTypeLabel" ClientIDMode="Static" CssClass="formLabel">Case Type:<span class="required">*</span>
+                                     <asp:RequiredFieldValidator runat="server" ID="followUpSearchCaseTypeValidator" ClientIDMode="Static" CssClass="formValidator" ControlToValidate="followUpSearchCaseType" ValidationGroup="followUpSearch" Text="! A case type is not selected."></asp:RequiredFieldValidator>
+                                </asp:Label>
+                               
+                                <div class="clear"></div>
+                                <asp:DropDownList runat="server" ID="followUpSearchCaseType" ClientIDMode="Static" CssClass="followUp formDDL" TabIndex="2"></asp:DropDownList>
+                            </div>
+                            <div class="twelve  has-dropdown hide empSearch formDDLWrapper">
+                                <asp:Label runat="server" ID="followUpSearchRegionLabel" ClientIDMode="Static" CssClass="formLabel">Region<span class="required">*</span>
+                                    <asp:Label runat="server" ID="regionSearchValidator" ClientIDMode="Static" CSSClass="formValidator errorText requiredFieldValidator">! A region is not selected</asp:Label> 
+                                </asp:Label>
+                                <div class="clear"></div>
+                                <asp:DropDownList runat="server" ID="followUpSearchRegion" ClientIDMode="Static" CssClass="followUp formDDL"></asp:DropDownList>
+                            </div>
+                            <div id="newCaseSearchOptionsWrapper" class="twelve column searchOptionsWrapper selectedOptionsWrapper hide empSearch">
+                                <fieldset id="newCaseSearchOptionsFieldset" class="twelve column">
+                                    <legend>Search Options</legend>
+                                    <asp:RadioButtonList runat="server" ID="newCaseSearchOptions" ClientIDMode="Static" CssClass="searchOptions selectOptions" RepeatDirection="Horizontal" RepeatLayout="Table">
+                                        <asp:ListItem Text="Name" Value="Name" Selected="True"></asp:ListItem>
+                                        <asp:ListItem Text="Employee ID" Value="EID"></asp:ListItem>
+                                        <asp:ListItem Text="Phone 1" Value="PhoneOne"></asp:ListItem>
+                                        <asp:ListItem Text="Phone 2" Value="PhoneTwo"></asp:ListItem>
+
+                                    </asp:RadioButtonList>
+                                </fieldset>
+                            </div>
+                            <div id="optionsWrapper" class="hide empSearch">
+                                <div id="newCaseNameField" class="twelve  searchOptionWrapper">
+                                    <asp:Label runat="server" ID="fNameLabel" ClientIDMode="Static" CssClass="formLabel">First Name
+                                        <asp:RegularExpressionValidator runat="server" ID="fNameExpressionValidator" CssClass="formValidator" ControlToValidate="fName" ValidationGroup="followUpSearch" Display="Dynamic" ValidationExpression="^[a-zA-Z '-]*$" Text="! First name is not valid"></asp:RegularExpressionValidator>
+                                        <span id="requiredNameValidator" class="formValidator errorText requiredFieldValidator">! Please enter a Name</span>
+                                    </asp:Label>
+                                    
+                                    <asp:TextBox runat="server" ID="fName" ClientIDMode="Static" CssClass=" formField" TabIndex="1"></asp:TextBox>
+                                    <asp:Label runat="server" ID="lNameLabel" ClientIDMode="Static" CssClass="formLabel">Last Name</asp:Label>
+                                    <asp:RegularExpressionValidator runat="server" ID="lNameExpressionValidator" CssClass="formValidator" ControlToValidate="lName" ValidationGroup="followUpSearch" ValidationExpression="^[a-zA-Z '-]*$" Display="Dynamic" Text="! Last name is not valid"></asp:RegularExpressionValidator>
+                                    <asp:TextBox runat="server" ID="lName" ClientIDMode="Static" CssClass="formField" TabIndex="2"></asp:TextBox>
+                                </div>
+                                <div id="newCaseEIDField" class="twelve  searchOptionWrapper hide">
+                                    <asp:Label runat="server" ID="employeeIDLabel" ClientIDMode="Static" CssClass="formLabel">Employeee ID
+                                        <asp:RegularExpressionValidator runat="server" ID="eidExpValidator" CssClass="formValidator" ControlToValidate="followUpSearchEID" ValidationGroup="followUpSearch" Display="Dynamic" ValidationExpression="[-]?[0-9]+$" Text="! Employee ID is invalid."></asp:RegularExpressionValidator>
+                                        <span id="requiredEIDValidator" class="formValidator errorText requiredFieldValidator">! Please enter an Employee ID</span>
+                                    </asp:Label>
+                                    <asp:TextBox runat="server" ID="followUpSearchEID" ClientIDMode="Static" CssClass=" formField" TabIndex="1"></asp:TextBox>
+                                </div>
+
+                                <div id="newCasePhoneOneField" class="twelve searchOptionWrapper hide">
+                                    <asp:Label runat="server" ID="phoneOneLabel" ClientIDMode="Static" CssClass="formLabel">Phone 1 (ex.555-555-5555)
+                                        <asp:RegularExpressionValidator runat="server" ID="phoneOneExpValidator" CssClass="formValidator" ControlToValidate="phoneOne" ValidationGroup="followUpSearch" Display="Dynamic" ValidationExpression="((\(\d{3}\) ?)|(\d{3}-))?\d{3}-\d{4}" Text="! Phone 1 is not valid phone number."></asp:RegularExpressionValidator>
+                                        <span id="requiredPhoneValidator" class="formValidator errorText requiredFieldValidator">! Please enter a Phone Number</span>
+                                    </asp:Label>
+                                    <asp:TextBox runat="server" ID="phoneOne" ClientIDMode="Static" CssClass=" formField" TabIndex="1"></asp:TextBox>
+                                </div>
+
+                                <div id="newCasePhoneTwoField" class="twelve searchOptionWrapper  hide">
+                                    <asp:Label runat="server" ID="phoneTwoLabel" ClientIDMode="Static" CssClass="formLabel">Phone 2 (ex.555-555-5555)
+                                         <asp:RegularExpressionValidator runat="server" ID="phoneTwoExpValidator" CssClass="formValidator" ControlToValidate="phoneTwo" ValidationGroup="followUpSearch" Display="Dynamic" ValidationExpression="((\(\d{3}\) ?)|(\d{3}-))?\d{3}-\d{4}" Text="!Phone 2 is not valid phone number."></asp:RegularExpressionValidator>
+                                         <span id="requiredAltPhoneValidator" class="formValidator errorText requiredFieldValidator">! Please enter a Phone Number</span>
+                                    </asp:Label>
+                                    <asp:TextBox runat="server" ID="phoneTwo" ClientIDMode="Static" CssClass="formField" TabIndex="1"></asp:TextBox>
+                                </div>
+
+                            </div>
+                        </div>
+                        <div id="searchBtnWrapper" class="twelve hide empSearch">
+                            <asp:Button ID="newCaseSearchBtn" CssClass="medium button rightButton" ClientIDMode="Static" runat="server" Text="Search" ValidationGroup="followUpSearch" TabIndex="3" />
+                        </div>
+                    </fieldset>
+                </div>
+                <div id="resultsWrapper" class="seven column search">
+                    <fieldset id="resultsFieldset" class="">
+                        <legend>Results</legend>
+                        <div id="resultsAlertMessageWrapper" class="twelve column alert-box alert">
+                            <asp:Label runat="server" ID="searchResultsMessage" ClientIDMode="Static" CssClass=""> </asp:Label>
+                        </div>
+                        <div id="resultsSuccessMessageWrapper" class="twelve column alert-box success">
+                            <asp:Label runat="server" ID="caseSuccessMessage" ClientIDMode="Static" CssClass=""> </asp:Label>
+                        </div>
+
+                        <div id="employeeSelectMessage" class="message twelve hide">
+                            <p id="P3" class="ui-state-highlight">Please select the desired employee.</p>
+                        </div>
+
+                        <ig:WebDataGrid ID="employeeSearchResultsGrid" ClientIDMode="Static" CssClass="hide grid" ItemCssClass="pointer" runat="server" StyleSetName="IG">
+                            <ClientEvents Click="employeeSearchResultsGrid_Grid_Click" />
+                            <Behaviors>
+                                <ig:Selection CellClickAction="Row" RowSelectType="Single" SelectedCellCssClass="activeRow">
+                                </ig:Selection>
+                            </Behaviors>
+                        </ig:WebDataGrid>
+                    </fieldset>
+                    <div class="four nextWrapper">
+                        <asp:Button ID="newFollowUpBackBtn" CssClass="medium button rightButton" ClientIDMode="Static" runat="server" Text="Back" />
+                        <asp:Button runat="server" ID="newFollowUpCaseNextBtn" ClientIDMode="Static" CssClass="medium button" ValidationGroup="followUpSearch" Text="Next" />
+                    </div>
+                </div>
+                <!--------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+                     Begin Follow Up Case information Wrapper
+
+                -------------------------------------------------------------------------------------------------------------------------------------------------------------->
+
+                <div id="followUpCaseWrapper" class="nine column formWrapper hide">
+                    <fieldset id="followUpCaseInfoFiledset" class="twelve">
+                        <legend>Case Information</legend>
+                        <asp:Panel runat="server" ID="empInfoWrapper" ClientIDMode="Static" CssClass="three column empInfoWrapper">
+                            <asp:Panel runat="server" ID="followUpCasEmployeeInfoeWrapper" ClientIDMode="Static" CssClass="twelve column empInfoPanel">
+                                <div class="twelve ">
+                                    <asp:Label runat="server" ID="followUpCaseNameText" ClientIDMode="Static" CssClass="editForm blockLabel"><strong>
+                                        <asp:Label runat="server" ID="followUpCaseNameLabel" ClientIDMode="Static">Name:</asp:Label>
+                                    </strong>
+                                        <asp:Label runat="server" ID="followUpCaseName" ClientIDMode="Static" CssClass="blockText"></asp:Label></asp:Label>
+                                </div>
+                                <div class="twelve">
+                                    <asp:Label runat="server" ID="followUpCaseEIDText" ClientIDMode="Static" CssClass="editForm blockLabel"><strong>
+                                        <asp:Label runat="server" ID="followUpCaseEIDLabel" ClientIDMode="Static">EmployeeID:</asp:Label>
+                                    </strong>
+                                        <asp:Label runat="server" ID="followUpCaseEID" ClientIDMode="Static" CssClass="blockText"></asp:Label></asp:Label>
+                                </div>
+                                <div class="twelve">
+                                    <asp:Label runat="server" ID="followUpCasePhoneText" ClientIDMode="Static" CssClass="editForm blockLabel"><strong>
+                                        <asp:Label runat="server" ID="followUpCasePhoneLabel" ClientIDMode="Static">Phone 1:</asp:Label>
+                                    </strong>
+                                        <asp:Label runat="server" ID="followUpCasePhone" ClientIDMode="Static" CssClass="editForm blockText"></asp:Label></asp:Label>
+                                </div>
+                                <div class="twelve">
+                                    <asp:Label runat="server" ID="followUpCaseAltPhoneText" ClientIDMode="Static" CssClass="editForm blockLabel"><strong>
+                                        <asp:Label runat="server" ID="followUpCaseAltPhoneLabel" ClientIDMode="Static">Phone 2:</asp:Label>
+                                    </strong>
+                                        <asp:Label runat="server" ID="followUpCaseAltPhone" ClientIDMode="Static" CssClass="blockText"></asp:Label></asp:Label>
+                                </div>
+                                <asp:Panel runat="server" ID="ShiftInfoWrapper" ClientIDMode="Static" CssClass="twelve">
+                                    <asp:Label runat="server" ID="followUpCaseShiftInText" ClientIDMode="Static" CssClass="editForm blockLabel"><strong>
+                                        <asp:Label runat="server" ID="shiftInLabel" ClientIDMode="Static">Shift Time In:</asp:Label>
+                                    </strong>
+                                        <asp:Label runat="server" ID="shiftIn" ClientIDMode="Static" CssClass="blockText"></asp:Label></asp:Label>
+                                    <asp:Label runat="server" ID="followUpCaseShiftOutText" ClientIDMode="Static" CssClass="editForm blockLabel"><strong>
+                                        <asp:Label runat="server" ID="shiftOutLabel" ClientIDMode="Static">Shift Time Out:</asp:Label>
+                                    </strong>
+                                        <asp:Label runat="server" ID="shiftOut" ClientIDMode="Static" CssClass="blockText"></asp:Label></asp:Label>
+                                </asp:Panel>
+
+
+                            </asp:Panel>
+                        </asp:Panel>
+                        <asp:Panel runat="server" ID="followUpCaseInfoWrapper" ClientIDMode="Static" CssClass="nine column formSection">
+
+                            <div id="followUpCaseTypeWrapper" class="twelve has-dropdown formDDLWrapper">
+                                <asp:Label runat="server" ID="followUpCaseTypeLabel" ClientIDMode="Static" CssClass="formLabel">Case Type</asp:Label>
+                                <div class="clear"></div>
+                                <asp:Label runat="server" ID="followUpCaseType" ClientIDMode="Static" CssClass=""></asp:Label>
+                            </div>
+                            <div id="followUpCaseReasonWrapper" class="twelve has-dropdown formDDLWrapper">
+                                <asp:Label runat="server" ID="followUpCaseReasonLabel" ClientIDMode="Static" CssClass="formLabel">Reason<span class="required">*</span>
+                                    <asp:RequiredFieldValidator runat="server" ID="followUpCaseReasonValidator" ClientIDMode="Static" CssClass="formValidator" ControlToValidate="followUpCaseReason" ValidationGroup="followUpCase" Display="Dynamic" Text="! A reason is not selected."></asp:RequiredFieldValidator>
+                                     <asp:Label runat="server" ID="followUpReasonValidator" ClientIDMode="Static" CSSClass="formValidator errorText requiredFieldValidator">! A reason is required.</asp:Label>
+                                </asp:Label>
+                                <div class="clear"></div>
+                                <asp:DropDownList runat="server" ID="followUpCaseReason" ClientIDMode="Static" CssClass="formDDL" TabIndex="1"></asp:DropDownList>
+                            </div>
+                            <asp:Panel runat="server" ID="followUpCaseNotifiedWrapper" ClientIDMode="Static" CssClass="twelve">
+                                <asp:Panel runat="server" ID="followUpCaseNotifiedMessageWrapper" ClientIDMode="Static" CssClass="message twelve clear">
+                                    <p id="P8" class="ui-state-highlight">If supervisor is unavailable, please enter <strong>N/A</strong></p>
+                                </asp:Panel>
+                                <asp:Label runat="server" ID="followUpCaseNotifiedLabel" ClientIDMode="Static" CssClass="formLabel">Notified<span class="required">*</span>
+                                    <asp:RequiredFieldValidator runat="server" ID="followUpCaseNotifiedValidator" ClientIDMode="Static" CssClass="formValidator" ControlToValidate="followUpCaseNotified" ValidationGroup="followUpCase" Display="Dynamic" Text="! A name is required. If unavailable, enter N/A."></asp:RequiredFieldValidator>
+                                    <asp:RegularExpressionValidator runat="server" ID="followUpCaseExpNotifiedValidator" CssClass="formValidator" ClientIDMode="Static" ControlToValidate="followUpCaseNotified" ValidationGroup="followUpCase" Display="Dynamic" ValidationExpression="^[a-zA-Z '-/]*$" Text="! Name is invalid."></asp:RegularExpressionValidator>
+                                </asp:Label>
+                                <asp:TextBox runat="server" ID="followUpCaseNotified" ClientIDMode="Static" CssClass="formField" TabIndex="2"></asp:TextBox>
+                            </asp:Panel>
+
+                            <asp:Panel runat="server" ID="followUpCaseShiftWrapper" ClientIDMode="Static" Visible="false" CssClass="twelve borderTop">
+                                <div id="followUpShiftMessageWrapper" class="message twelve caseMessageWrapper">
+                                    <p class="ui-state-highlight">Shift Times the employee has agreed to cover</p>
+                                </div>
+                                <div id="followUpCaseShiftInWrapper" class="twelve shiftInWrapper">
+                                    <div class="six shiftDateWrapper column">
+                                        <asp:Label runat="server" ID="followUpCaseShiftDateLabel" ClientIDMode="Static" CssClass="formLabel">Shift Date<span class="required">*</span>
+                                            <asp:RequiredFieldValidator runat="server" ID="followUpCaseShiftDateValidator" ClientIDMode="Static" CssClass="formValidator" ControlToValidate="followUpCaseShiftDate" ValidationGroup="followUpCase" Display="Dynamic" Text="! A date is required."></asp:RequiredFieldValidator>
+                                            <asp:RegularExpressionValidator runat="server" ID="followUpShiftDateExpValidator" CssClass="formValidator" ClientIDMode="Static" ControlToValidate="followUpCaseShiftDate" ValidationGroup="followUpCase" Display="Dynamic" ValidationExpression="^(0[1-9]|1[012])[- /.](0[1-9]|[12][0-9]|3[01])[- /.](19|20)\d\d$" Text="! Date is invalid."></asp:RegularExpressionValidator>
+                                            <asp:Label runat="server" ID="followUpShiftDateValidator" ClientIDMode="Static" CSSClass="formValidator errorText requiredFieldValidator">! Shift Date is after Shift End Date</asp:Label>
+                                        </asp:Label>
+                                        <div class="clear"></div>
+                                        <ig:WebDatePicker ID="followUpCaseShiftDate" ClientIDMode="Static" CssClass="dateField formField" runat="server" DropDownCalendarID="followUpCaseShiftDateCalendar" StyleSetName="IG" OpenCalendarOnFocus="True" EditModeFormat="MM/dd/yyyy" TabIndex="3"></ig:WebDatePicker>
+                                        <ig:WebMonthCalendar ID="followUpCaseShiftDateCalendar" CssClass="calendar" StyleSetName="IG" runat="server"></ig:WebMonthCalendar>
+                                    </div>
+                                    <div class="six column endField">
+                                        <asp:Label runat="server" ID="followUpCaseShiftTimeInLabel" ClientIDMode="Static" CssClass="formLabel">Shift Time In<span class="required">*</span>
+                                            <asp:RequiredFieldValidator runat="server" ID="followUpCaseShiftTimeInValidator" ClientIDMode="Static" CssClass="formValidator" ControlToValidate="followUpCaseShiftTimeIn" ValidationGroup="followUpCase" Display="Dynamic" Text="! A time is not selected."></asp:RequiredFieldValidator>
+                                            <asp:Label runat="server" ID="followUpShiftTimeInValidator" ClientIDMode="Static" CSSClass="formValidator errorText requiredFieldValidator"></asp:Label>
+                                        </asp:Label>
+                                        <div class="clear"></div>
+                                        <asp:DropDownList runat="server" ID="followUpCaseShiftTimeIn" ClientIDMode="Static" CssClass="formDDL" TabIndex="4"></asp:DropDownList>
+                                    </div>
+                                    <div class="clear"></div>
+                                </div>
+                                <div id="followUpCaseShiftEdnWrapper" class="twelve shiftEndWrapper">
+                                    <div class="six shiftDateWrapper column">
+                                        <asp:Label runat="server" ID="followUpCaseShiftEndDateLabel" ClientIDMode="Static" CssClass="formLabel">Shift End Date<span class="required">*</span>
+                                            <asp:RequiredFieldValidator runat="server" ID="followUpCaseShiftEndDateValidator" ClientIDMode="Static" CssClass="formValidator" ControlToValidate="followUpCaseshiftEndDate" ValidationGroup="followUpCase" Display="Dynamic" Text="! A date is required."></asp:RequiredFieldValidator>
+                                            <asp:RegularExpressionValidator runat="server" ID="followUpCaseShiftEndDateExpValidator" CssClass="formValidator" ClientIDMode="Static" ControlToValidate="followUpCaseshiftEndDate" ValidationGroup="followUpCase" Display="Dynamic" ValidationExpression="^(0[1-9]|1[012])[- /.](0[1-9]|[12][0-9]|3[01])[- /.](19|20)\d\d$" Text="Shift Date is invalid."></asp:RegularExpressionValidator>
+                                             <asp:Label runat="server" ID="followUpShiftEndDateValidator" ClientIDMode="Static" CSSClass="formValidator errorText requiredFieldValidator"></asp:Label> 
+                                        </asp:Label>
+                                        <div class="clear"></div>
+                                        <ig:WebDatePicker ID="followUpCaseShiftEndDate" ClientIDMode="Static" CssClass="dateField formField" runat="server" DropDownCalendarID="followUpCaseShiftEndDateCalendar" StyleSetName="IG" OpenCalendarOnFocus="True" EditModeFormat="MM/dd/yyyy" TabIndex="5"></ig:WebDatePicker>
+                                        <ig:WebMonthCalendar ID="followUpCaseShiftEndDateCalendar" CssClass="calendar" StyleSetName="IG" runat="server"></ig:WebMonthCalendar>
+                                    </div>
+
+                                    <div class="six column  endField">
+                                        <asp:Label runat="server" ID="followUpCaseShiftTimeOutLabel" ClientIDMode="Static" CssClass="formLabel">Shift Time Out<span class="required">*</span>
+                                            <asp:RequiredFieldValidator runat="server" ID="followUpCaseShiftTimeOutValidator" ClientIDMode="Static" CssClass="formValidator" ControlToValidate="followUpCaseShiftTimeOut" Display="Dynamic" ValidationGroup="followUpCase" Text="! A time is not selected."></asp:RequiredFieldValidator>
+                                             <asp:Label runat="server" ID="followUpShiftTimeOutValidator" ClientIDMode="Static" CSSClass="formValidator errorText requiredFieldValidator"></asp:Label>
+                                        </asp:Label>
+                                        <div class="clear"></div>
+                                        <asp:DropDownList runat="server" ID="followUpCaseShiftTimeOut" ClientIDMode="Static" CssClass="formDDL" TabIndex="6"></asp:DropDownList>
+                                    </div>
+                                     <div class="clear"></div>
+                                </div>
+
+
+                            </asp:Panel>
+                        </asp:Panel>
+                        <div class="clear"></div>
+
+                        <div id="followUpNotesWrapper" class="twelve">
+                            <div class="twelve">
+                                <asp:Label runat="server" ID="followUpCaseNotesLabel" ClientIDMode="Static" CssClass="formLabel">Notes(Required when specified)
+                                    <asp:Label runat="server" ID="followUPNotesValidator" ClientIDMode="Static" CSSClass="formValidator errorText requiredFieldValidator">! Notes are required</asp:Label>
+                                </asp:Label>
+                               
+                                <asp:TextBox runat="server" ID="followUpCaseNotes" ClientIDMode="Static" CssClass="formField formTextArea" TextMode="MultiLine" TabIndex="7"></asp:TextBox>
+                            </div>
+
+                        </div>
+                        <asp:Panel runat="server" ID="followUPCaseErrorWrapper" ClientIDMode="Static" CssClass="twelve" Visible="false">
+                            <asp:Panel runat="server" ID="followUpCaseErrorMessageWrapper" ClientIDMode="Static" CssClass="message twelve clear">
+                                <p id="P7" class="ui-state-highlight">Select <strong>ONLY</strong> if case was created in error and needs to be closed.</p>
+                            </asp:Panel>
+                            <div id="followUpCaseErrorFieldWrapper" class="twelve">
+                                <asp:Label runat="server" ID="followupCaseErrorLabel" ClientIDMode="Static" CssClass="formLabel">Case Error</asp:Label>
+                                <asp:CheckBox runat="server" ID="followUpCaseError" ClientIDMode="Static" CssClass="formCheckbox"></asp:CheckBox>
+                            </div>
+                        </asp:Panel>
+                        <div id="followUpCaseSubmitWrapper" class="twelve">
+                            <asp:Button ID="followUpCaseBackBtn" CssClass="medium button rightButton" ClientIDMode="Static" runat="server" Text="Cancel" />
+                            <asp:Button ID="followUpCaseSubmitBtn" CssClass="medium button" ClientIDMode="Static" runat="server" Text="Save" ValidationGroup="followUpCase" TabIndex="8" />
+                        </div>
+                    </fieldset>
+                </div>
+            </div>
+            <!-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+               Begin Escalation Wrapper
+
+            ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------->
+            <div id="escalationWrapper" class="nine column formWrapper hide">
+                <fieldset id="escalationFieldset" class="twelve">
+                    <legend>Escalation Information</legend>
+                    <div id="escInfoMessageWrapper" class="message eight">
+                        <p id="P2" class="ui-state-highlight">
+                            Please enter in any additional information regaring this case.
+                            <br />
+                            Case information (i.e. employee information, follow ups) will be added upon sending.
+                        </p>
+                    </div>
+                    <div id="escMessageWrapper" class="twelve">
+                        <div class="twelve">
+                            <asp:Label runat="server" ID="escMessageLabel" ClientIDMode="Static" CssClass="formLabel">Message
+                                <asp:RequiredFieldValidator runat="server" ID="escMessageValidator" ClientIDMode="Static" CssClass="formValidator" ControlToValidate="escMessage" ValidationGroup="escalation" ErrorMessage="! Message Required"></asp:RequiredFieldValidator>
+                            </asp:Label>
+                            
+                            <ighedit:WebHtmlEditor ID="escMessage" ClientIDMode="Static" CssClass="formField" runat="server"></ighedit:WebHtmlEditor>
+                        </div>
+                        <div id="escSubmitWrapper" class="twelve">
+                            <button id="escCancel" class="medium button rightButton">Cancel</button>
+                            <asp:Button ID="escSubmitBtn" CssClass="medium button" ClientIDMode="Static" runat="server" Text="Send" ValidationGroup="escalation" />
+                        </div>
+                    </div>
+                </fieldset>
+
+
+            </div>
+            <!------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+                End of Content
+
+            ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------->
+
+            <div class="clear bottomspacing"></div>
+        </ContentTemplate>
+        <Triggers>
+            <asp:AsyncPostBackTrigger ControlID="editCaseBtn" EventName="Click" />
+            <asp:AsyncPostBackTrigger ControlID="exitSubmitBtn" EventName="Click" />
+        </Triggers>
+    </asp:UpdatePanel>
+
+    <asp:UpdateProgress runat="server" ID="UpdateProgress" AssociatedUpdatePanelID="contentUpdate" ClientIDMode="Static">
+        <ProgressTemplate>
+            <div id="savingModal" class="reveal-modal small">
+                <p id="P1" class="">
+                    <span id="modalMessage">Saving Case Information</span>...<br />
+                    please wait
+                </p>
+                <div id="savingModalLoadingIconWrapper" class="one">
+                    <img src="Images/loading_alt.gif" class="" alt="" id="" />
+                </div>
+            </div>
+        </ProgressTemplate>
+    </asp:UpdateProgress>
+    <div id="exitModalbackground" class="modalBackground">
+    </div>
+    <div id="exitModal" class="reveal-modal small">
+        <p id="P6" class="">
+            Exiting from this case will result in the case being closed and marked as an error.<br />
+            <span class="modalAlertMessage">Are you sure you want to proceed?</span>
+        </p>
+        <div id="exitModalSubmitWrapper" class="twelve">
+            <button id="exitModalCancelBtn" class="medium button rightButton">Cancel</button>
+            <asp:Button ID="exitSubmitBtn" CssClass="medium button" ClientIDMode="Static" runat="server" Text="Proceed" CausesValidation="false" />
+        </div>
+    </div>
+
+    <div id="newCaseTypeModal" class="reveal-modal small">
+        <div id="Div2" class="twelve">
+            <p>Is the new case for a different employee or the employee in this case?</p>
+            <div id="editNewCaseSelectionWrapper" class="twelve searchOptionsWrapper selectedOptionsWrapper">
+                <asp:RadioButtonList runat="server" ID="editNewCaseSelectOptions" ClientIDMode="Static" CssClass="searchOptions selectOptions" RepeatDirection="Horizontal" RepeatLayout="Table" TabIndex="3">
+                    <asp:ListItem Text="Different Employee" Value="New" Selected="true"></asp:ListItem>
+                    <asp:ListItem Text="Current Employee" Value="Existing"></asp:ListItem>
+
+                </asp:RadioButtonList>
+            </div>
+            <div class="clear"></div>
+            <div id="editNewCaseWrapper" class="clear hide">
+                <p>Please select a Case Type (if different)</p>
+                <asp:Label runat="server" ID="newCaseTypeLabel" ClientIDMode="Static" CssClass="formLabel">Case Type</asp:Label>
+                <asp:RequiredFieldValidator runat="server" ID="newCaseTypeValidator" ClientIDMode="Static" CssClass="formValidator" ControlToValidate="newCaseType" ValidationGroup="newCase" Display="None" ErrorMessage="." Text="*"></asp:RequiredFieldValidator>
+                <div class="clear"></div>
+                <asp:DropDownList runat="server" ID="newCaseType" ClientIDMode="Static" CssClass="formDDL"></asp:DropDownList>
+            </div>
+        </div>
+
+        <div id="editNewCaseSubmitWrapper" class="twelve">
+            <button id="newCaseCancelBtn" class="medium button rightButton">Cancel</button>
+            <asp:Button ID="newCaseSubmitBtn" CssClass="medium button" ClientIDMode="Static" runat="server" Text="Create Case" ValidationGroup="" UseSubmitBehavior="False" />
+        </div>
+
+    </div>
+    <script type="text/javascript">
+        /* ================================================================================
+            Functions
+        =================================================================================*/
+        function pageLoad(sender, args) {
+            $(document).foundationCustomForms();
+            $('#newFollowUpCaseNextBtn').attr('disabled', true).addClass('disabled');
+            $('#editFollowUpBtn').attr('disabled', true).addClass('disabled');
+            $('#sendFollowUpBtn').attr('disabled', true).addClass('disabled');
+
+            // DIsable escalation and send template button for cases that are non attendance cases
+            if ($('#caseType').text() === 'Time Off' || $('#caseType').text() === 'Miscellaneous' || $('#caseType').text() === 'Request for Work') {
+                $('#escButton').attr('disabled', true).addClass('disabled');
+                $('#sendTemplateBtn').attr('disabled', true).addClass('disabled');
+            }
+
+
+        }
+
+        function initializeRequest(sender, args) {
+            $('.requiredFieldValidator').hide();
+            if (submitting === true) {
+                if (followUp === true) { // Adding/Editing Follow Up
+
+                    var reason = $('#followUpCaseReason').children('option:selected').text();
+                    var reasonID = parseInt($('#followUpCaseReason').val());
+                    if (reason === "N/A" && $('#followUpCaseError').is(':checked') === false){
+                        args.set_cancel(true);
+                        $('#followUpReasonValidator').show();
+                    }else if ((reasonID === 86 || $('#followUpCaseError').is(':checked') === true) && ($('#followUpCaseNotes').val() === "" || $('#followUpCaseNotes').val() === followUpNotes || $('#followUpCaseNotes').val().length < followUpNotes.length)) {
+                        args.set_cancel(true);
+                        $('#followUPNotesValidator').show();
+                    } else if (reason.indexOf("notes") > -1 && $('#followUpCaseNotes').val() === '') {
+                        args.set_cancel(true);
+                        $('#followUPNotesValidator').show();
+                    } else if ((reasonID >= 27 && reasonID <= 31) || reasonID === 93) {
+                        // Check Shift DateTime for attendance cases
+                        var shiftDate = $find("<%=followUpCaseShiftDate.ClientID%>");
+                        var sDate = new Date(shiftDate.get_text());
+
+                        var shiftEndDate = $find("<%=followUpCaseShiftEndDate.ClientID%>");
+                        var eDate = new Date(shiftEndDate.get_text());
+                        var nextDay = new Date(sDate.getFullYear(), sDate.getMonth(), sDate.getDate() + 1);
+
+                       // Validate Shift Times
+                        if ($('#followUpCaseShiftTimeIn').val() === "N/A") {
+                            args.set_cancel(true);
+                            $('#followUpShiftTimeInValidator').text("! A time is not selected").show();
+                        } else if ($('#followUpCaseShiftTimeOut').val()=== "N/A") {
+                            args.set_cancel(true);
+                            $('#followUpShiftTimeOutValidator').text("! A time is not selected").show();
+                        }else if (sDate.getTime() === eDate.getTime() || eDate.getTime() === nextDay.getTime()) {
+                            var shiftTimeIn = new Date(shiftDate.get_text() + " " + $('#followUpCaseShiftTimeIn').val() + ':00');
+                            var shiftTimeOut = new Date(shiftEndDate.get_text() + " " + $('#followUpCaseShiftTimeOut').val() + ':00');
+
+                            if (shiftTimeIn > shiftTimeOut) {
+                                args.set_cancel(true);
+                                $('#followUpShiftTimeInValidator').text('! Shift Time is after Shift End Time').show();
+                            } else {
+                                $('#modalMessage').text("Saving Case");
+                                showModal();
+                            }
+
+                        } else {
+                            if (sDate > eDate) {
+                                $('#followUpShiftDateValidator').text('! Shift Date is after Shift End Date').show();
+                                args.set_cancel(true);
+                            } else if (eDate.getMonth === sDate.getMonth && (eDate.getDate() - sDate.getDate()) > 1) {
+                                $('#followUpShiftEndDateValidator').text('! Greater than 1 day from Shift Date').show();
+                                args.set_cancel(true);
+                            } else if (eDate.getMonth() !== sDate.getMonth()) {
+                                $('#followUpShiftEndDateValidator').text('! Month does not match the Start Date').show();
+                                args.set_cancel(true);
+                            } else if (eDate.getYear() !== sDate.getMonth()) {
+                                $('#followUpShiftEndDateValidator').text('! Year does not match the Start Date').show();
+                                args.set_cancel(true);
+                            } else {
+                                $('#modalMessage').text("Saving Case");
+                                showModal();
+                            }
+                        }
+                    }
+                } else if (edit === true) { // Editig Case
+                    //Determine Case Type ID
+                    var caseType = parseInt($('#editCaseType').val());
+
+                    var value = $('#editReason').children('option:selected').text();
+                    if (($('#editReason').children('option:selected').text().indexOf("Disregard") > -1 || $('#caseError').is(':checked') === true) && ($('#editNotes') === "" || $('#notes').text() === $('#editNotes').val() || $('#notes').text().length > $('#editNotes').val().length)) {
+                        args.set_cancel(true);
+                        $('#notesValidator').show();
+                    } else if ($('#editReason').children('option:selected').text().indexOf("notes") > -1 && $('#editNotes').val() === '') {
+                        args.set_cancel(true);
+                        $('#notesValidator').show();
+                    } else if (caseType <= 7) {
+                        // Check Shift DateTime for attendance cases
+                        var shiftDate = $find("<%=editShiftDate.ClientID%>");
+                        var sDate = new Date(shiftDate.get_text());
+
+                        var shiftEndDate = $find("<%=editShiftEndDate.ClientID%>");
+                        var eDate = new Date(shiftEndDate.get_text());
+                        var nextDay = new Date(sDate.getFullYear(), sDate.getMonth(), sDate.getDate() + 1);
+
+
+                        if (sDate.getTime() === eDate.getTime() || eDate.getTime() === nextDay.getTime()) {
+                            var shiftTimeIn = new Date(shiftDate.get_text() + " " + $('#editShiftTimeIn').val() + ':00');
+                            var shiftTimeOut = new Date(shiftEndDate.get_text() + " " + $('#editShiftTimeOut').val() + ':00');
+
+                            if (shiftTimeIn > shiftTimeOut) {
+                                args.set_cancel(true);
+                                $('#shiftTimeInValidator').text('! Shift Time is after Shift End Time').show();
+                            } else {
+                                $('#modalMessage').text("Saving Case");
+                                showModal();
+                            }
+
+                        } else {
+                            if (sDate > eDate) {
+                                $('#shiftDateValidator').text('! Shift Date is after Shift End Date').show();
+                                args.set_cancel(true);
+                            } else if ((eDate.getDay() - sDate.getDay()) > 1) {
+                                $('#shiftEndDateValidator').text('! Greater than 1 day from Shift Date').show();
+                                args.set_cancel(true);
+                            } else {
+                                $('#modalMessage').text("Saving Case");
+                                showModal();
+                            }
+                        }
+
+                    } else { /// Case Is not Attendance Case - Meets Notes condition
+                        $('#modalMessage').text("Saving Case");
+                        showModal();
+                    }
+                } else {// case is being assigned to an agent
+                    $('#modalMessage').text("Saving Case");
+                    showModal();
+                }
+            } else if (sendTemplate === true) { // Template being sent
+                $('#modalMessage').text('Sending Template');
+                 showModal();
+            } else {// Entering in a new follow Up or Submitting escalation
+                if (followUp === true && searching === true) {// Searching
+                    if ($('#followUpSearchRegion').val() === "") {
+                        args.set_cancel(true);
+                        $('#regionSearchValidator').show();
+                    } else if (parseInt($('#followUpSearchCaseType').val()) === 5) {
+                        switch (newCaseSearchOption) {
+                            case "Name":
+                                if ($('#fName').val() === "" && $('#lName').val() === "") {
+                                    args.set_cancel(true);
+                                    $('#requiredNameValidator').show();
+                                }
+                                break;
+                            case "EID":
+                                if ($('#followUpSearchEID').val() === "") {
+                                    args.set_cancel(true);
+                                    $('#requiredEIDValidator').show();
+                                }
+                                break;
+                            case "PhoneOne":
+                                if ($('#phoneOne').val() === "") {
+                                    args.set_cancel(true);
+                                    $('#requiredPhoneValidator').show();
+                                }
+                                break;
+                            case "PhoneTwo":
+                                if ($('#phoneTwo').val() === "") {
+                                    args.set_cancel(true);
+                                    $('#requiredAltPhoneValidator').show();
+                                }
+                                break;
+                            default:
+                              
+                                if ($('#fName').val() === "" && $('#lName').val() === "") {
+                                    args.set_cancel(true);
+                                    $('#requiredNameValidator').show();
+                                }
+                               break;
+                        }
+                    } else {
+
+                    }
+                }else if (escalation === true) {
+
+                } else {
+                    $('#modalMessage').text('Creating Case');
+                    showModal();
+                }
+            }
+        }
+
+        function endRequest(sender, args) {
+            // if error occured display error message
+            if (args.get_error() !== undefined && args.get_error() !== null) {
+                var m = args.get_error().message;
+                var message = m.split(":");
+
+                $('#caseText').hide();
+                $('#dateText').hide();
+                $('#caseEditWrapper').hide();
+                $('#followUpWrapper').hide();
+                $('#escalationWrapper').hide();
+             
+              
+                if (message[2] !== undefined) {
+                    $('#errorMessage').text(message[1] + ": " + message[2]);
+                } else {
+                    $('#errorMessage').text(message[1]);
+                };
+
+                //Show Error Message
+                $('#errorMessagePanel').toggle('fade').delay(30000).fadeOut(1000);
+                $('.change').attr('disabled', false);
+                $('#settingsBtn').attr('disabled', false);
+                $('#headerLoginView_signOutBtn').attr('disabled', false);
+
+                if ($('#infoWrapper').is(":visible") === false) {
+                    $('#infoWrapper').css('margin-top', '75px').toggle('fade').delay(30900).animate({ marginTop: 0 });
+                } else {
+                    $('#infoWrapper').css('margin-top', '75px').delay(30900).animate({ marginTop: 0 });
+                }
+
+                args.set_errorHandled(true);
+                reset();
+            } else {
+                // If Sending Case or Follow Up Template  -Not Adding or editing
+                if (submitting === true || sendTemplate === true) {
+                        // if submit was successful
+                        if ($('#successMessage').text() !== "") {
+                            // If not assigning a case hide Case HEading information enable buttons
+                            if ($('#successMessage').text() !== "Case has been assigned." || $('#successMessage').text() !== "Case has been unassigned.") {
+                                $('#caseText').hide();
+                                $('#dateText').hide();
+
+                                $('.change').attr('disabled', false);
+                                $('#settingsBtn').attr('disabled', false);
+                                $('#headerLoginView_signOutBtn').attr('disabled', false);
+                                reset();
+
+                            }
+
+                            //Show Success Message
+                            $('#infoWrapper').css('margin-top', '75px').toggle('fade').delay(10900).animate({ marginTop: 0 });
+                            $('#editCaseSuccessPanel').toggle('fade').delay(10000).fadeOut(1000);
+                        } else {
+                            $('#infoWrapper').toggle('fade');
+                            reset();
+                        }
+                    } else {
+                        if (followUp == true && edit === true) {
+                            //Dislpay Employee Information
+                            if ($('#employeeID').val() !== "") {
+                                $('#followUpCaseName').text(newCase.LastName + ", " + newCase.FirstName + " " + newCase.MI);
+                                $('#followUpCaseEID').text(newCase.EID);
+                                $('#followUpCasePhone').text(newCase.Phone);
+                                $('#followUpCaseAltPhone').text(newCase.AltPhone);
+                                $('#shiftIn').text(newCase.ShiftIn)
+                                $('#shiftOut').text(newCase.ShiftOut);
+
+                            }
+
+                            followUpNotes = $('#followUpCaseNotes').val();
+                            var reasonID = parseInt($("#followUpCaseReason").val());
+
+                            if (reasonID >31 && reasonID !== 93){
+                                // DIsable Fields if not Converage Case
+                                $('#followUpCaseShiftTimeIn').attr('disabled', true).trigger('change');
+                                $('#followUpCaseShiftTimeOut').attr('disabled', true).trigger('change');
+                                $('#followUpCaseNotified').attr('disabled', true).trigger('change');
+
+                                var shiftDate = $find("<%=editShiftDate.ClientID%>");
+                                var shiftEnd = $find("<%=editShiftEndDate.ClientID%>");
+
+                                shiftDate.set_enabled(true);
+                                shiftEnd.set_enabled(true);
+                            }
+                           
+                            $('.search').hide();
+                            $('#caseText').show();
+                            $('#dateText').show();
+                            $('#followUpCaseWrapper').show();
+                            $('#followUpWrapper').toggle('fade');
+
+                        } else if (followUp === true && edit === false && enterNewCaseInfo === true) {
+                           
+                           //Disable Navigation
+                            $('.change').attr('disabled', true);
+                            $('#settingsBtn').attr('disabled', true);
+                            $('#headerLoginView_signOutBtn').attr('disabled', true);
+
+                            //Display employee info
+                            if (newCase !== null && newCase !== undefined) {
+                                $('#followUpCaseName').text(newCase.LastName + ", " + newCase.FirstName + " " + newCase.MI);
+                                $('#followUpCaseEID').text(newCase.EmployeeID).show();
+                                $('#followUpCasePhone').text(newCase.PhoneOne).show();
+                                $('#followUpCaseAltPhone').text(newCase.PhoneTwo).show();
+                                $('#shiftIn').text(newCase.ShiftIn)
+                                $('#shiftOut').text(newCase.ShiftOut);
+                            } else {
+                                $('#empInfoWrapper').hide();
+                            }
+
+                            $('.search').hide();
+                            $('#caseText').show();
+                            $('#dateText').show();
+                           
+                            $('#followUpCaseWrapper').show();
+                            $('#followUpWrapper').show();
+                            enterNewCaeInfo = false;
+                            reasonChange = false;
+
+                        } else if (followUp === true && edit === false && enterNewCaseInfo === false) {
+                            $('#followUpWrapper').show();
+                            $('#newFollowUpCaseNextBtn').attr('disabled', true).addClass('disabled');
+                            if (searching === true) {
+                                searching = false;
+
+                                // Display Search Options
+                                if (parseInt($('#followUpSearchCaseType').val()) === 5) {
+                                    if (newCaseSearchOption !== 'Name') {
+                                        $('#newCaseNameField').hide();
+                                        $('#newCase' + newCaseSearchOption + 'Field').show();
+                                    }
+
+                                    $('.empSearch').show();
+
+                                    // Deselect rows after search
+                                    var empGrid = $find("<%=employeeSearchResultsGrid.ClientID%>");
+                                    var empRows = empGrid.get_behaviors().get_selection().get_selectedRows();
+                                    if (empRows.get_length() > 0) {
+                                        empRows.remove(empRows.getItem(0));
+                                        selectedRow = null;
+                                    }
+
+                                    // Display Results if Grid has rows
+                                    if (empGrid.get_rows().get_length() > 0) {
+                                        $('#resultsWrapper fieldset').css('background-color', '#fff');
+                                        $('#employeeSelectMessage').toggle('fade');
+                                        $('#employeeSearchResultsGrid').toggle('slide', { 'direction': 'up' }, 500);
+                                    } else {
+                                        $('#resultsWrapper fieldset').css('background-color', 'rgba(190, 184, 184, 0.59)');
+                                        $('#resultsAlertMessageWrapper').fadeIn(500).delay(5000).fadeOut();
+                                    }
+                                }
+                            }
+                        }else if(edit === true){
+                            //Display edit form
+                            $('#caseText').toggle('fade');
+                            $('#dateText').toggle('fade');
+                            $('#caseEditWrapper').toggle('fade');
+
+                        }else{
+                            $('#infoWrapper').toggle('fade');
+                            reset();
+                        }
+                    }
+                
+
+            }
+        }
+
+        function showModal() {
+            $('#savingModal').reveal({
+                closeOnBackgroundClick: false
+            });
+        }
+
+        function reset() {
+            reasonChange = true;
+            $('.formField').val('');
+            $('.formDDL').val('').trigger('change');
+            $('#employeeID').val('');
+
+            if (enterNewCaseInfo === true) {
+                enterNewCaseInfo = false;
+            }
+
+            if (reasonChange === true) {
+                reasonCHange = false;
+            }
+            if (submitting === true) {
+                submitting = false;
+            }
+
+            if (sendTemplate === true) {
+                sendTemplate = false;
+            }
+
+            if (followUp === true && edit === true) {
+                var grid = $find("<%=employeeSearchResultsGrid.ClientID%>");
+                var rows = grid.get_behaviors().get_selection().get_selectedRows();
+
+                if (rows !== null && rows !== undefined) {
+                    rows.remove(rows.getItem(0));
+                    selectedRow = null;
+                }
+             
+            } 
+
+                var grid = $find("<%=follwoUpGrid.ClientID%>");
+                var rows = grid.get_behaviors().get_selection().get_selectedRows();
+
+                if (rows !== null && rows !== undefined) {
+                    rows.remove(rows.getItem(0));
+                    selectedRow = null;
+                }
+               
+                //Disabled follow Up Buttons
+                $('#editFollowUpBtn').attr('disabled', true).addClass('disabled');
+                $('#sendFollowUpBtn').attr('disabled', true).addClass('disabled');
+           
+
+            if (followUp === true) {
+                followUp === false;
+            }
+
+            if (edit === true) {
+                edit = false;
+                $('#edit').val('');
+            }
+
+           
+        }
+        // retrieve information from selected follow up grid row
+        // Store information in newcase Object
+        function followUpGrid_Grid_Click(sender, args) {
+
+            var grid = $find("<%=follwoUpGrid.ClientID%>");
+            var rows = grid.get_behaviors().get_selection().get_selectedRows();
+            var row = rows.getItem(0);
+
+            if (row !== undefined && row !== null) {
+
+
+                if (selectedRow !== row.get_index()) {
+                    selectedRow = row.get_index();
+                    var caseType = row.get_cell(11).get_text();
+                    var reason = row.get_cell(12).get_text();
+                  
+                    if (caseType === 'Shift Coverage' && (reason.indexOf("Covering") > -1 || reason.indexOf("Disregard") > -1 || reason.indexOf("Accepted Shift") > -1)) {
+                        $('#sendFollowUpBtn').attr('disabled', false).removeClass('disabled');
+                    } else {
+                        $('#sendFollowUpBtn').attr('disabled', true).addClass('disabled');
+                    }
+
+
+                    newCase = new Object();
+                    newCase.FollowUpID = row.get_cell(0).get_text();
+                    newCase.EID = row.get_cell(14).get_text();
+                    newCase.DateEntered = row.get_cell(1).get_text();
+                    newCase.FirstName = row.get_cell(4).get_text();
+                    newCase.LastName = row.get_cell(3).get_text();
+                    newCase.MI = row.get_cell(5).get_text();
+                    newCase.Phone = row.get_cell(9).get_text();
+                    newCase.AltPhone = row.get_cell(10).get_text();
+                    newCase.ShiftIn = $('#inTime').text();
+                    newCase.ShiftOut = $('#outTime').text();
+                   
+
+                    $('#followUpID').val(row.get_cell(0).get_text());
+                    $('#employeeID').val(row.get_cell(14).get_text());
+                    $('#fpFirstName').val(row.get_cell(4).get_text());
+                    $('#fpLastName').val(row.get_cell(3).get_text());
+                    $('#fpMI').val(row.get_cell(5).get_text());
+                    $('#caseTypeName').val(row.get_cell(11).get_text());
+                    $('#editFollowUpID').val(row.get_cell(0).get_text());
+                    if ($('#editFollowUp').val() === 'True') {
+                        $('#editFollowUpBtn').attr('disabled', false).removeClass('disabled');
+                    }
+
+
+
+                } else {
+                    //deselect row if selected again
+                    //Disable follow up buttons
+                    $('#editFollowUpBtn').attr('disabled', true).addClass('disabled');
+                    $('#sendFollowUpBtn').attr('disabled', true).addClass('disabled');
+                    if (rows !== null && rows !== undefined) {
+                        rows.remove(rows.getItem(0));
+                        selectedRow = null;
+                    }
+                }
+            }
+
+        }
+        // Retrieve information from selected employee Grid
+        // sotre information in newcase onject
+        function employeeSearchResultsGrid_Grid_Click(sender, args) {
+            var grid = $find("<%=employeeSearchResultsGrid.ClientID%>");
+            var rows = grid.get_behaviors().get_selection().get_selectedRows();
+            var row = rows.getItem(0);
+
+            // When row is selected from employee search results capture employee information and store in  necase object
+            if (row !== undefined && row !== null) {
+                if (selectedRow !== row.get_index()) {
+                    selectedRow = row.get_index();
+                    $('#employeeID').val(row.get_cell(0).get_text());
+                    $('#fpFirstName').val(row.get_cell(2).get_text());
+                    $('#fpLastName').val(row.get_cell(1).get_text());
+                    $('#fpMI').val(row.get_cell(3).get_text());
+
+                    newCase.EmployeeID = row.get_cell(0).get_text();
+                    newCase.LastName = row.get_cell(1).get_text();
+                    newCase.FirstName = row.get_cell(2).get_text();
+                    newCase.MI = row.get_cell(3).get_text();
+                    newCase.PhoneOne = row.get_cell(4).get_text();
+                    if (row.get_cell(5).get_text() === "") {
+                        newCase.PhoneTwo = "N/A";
+                    } else {
+                        newCase.PhoneTwo = row.get_cell(5).get_text();
+                    }
+                    newCase.Region = $('#region').children('option:selected').text();
+                    newCase.CaseType = $('#caseType').children('option:selected').text();
+                    newCase.ShiftIn = $('#inTime').text();
+                    newCase.ShiftOut = $('#outTime').text();
+
+                    $('#newFollowUpCaseNextBtn').attr('disabled', false).removeClass('disabled');
+                }
+
+            } else {
+
+                //deselect row if selected again
+                if (rows !== null && rows !== undefined) {
+                    rows.remove(rows.getItem(0));
+                    selectedRow = null;
+                }
+            }
+        }
+
+        function resetDateFields(picker){
+            var d = new Date();
+            var dd = d.getDate();
+            var mm = d.getMonth() + 1;
+            var yyyy = d.getFullYear();
+
+            if (dd < 10) {
+                dd = '0' + dd;
+            }
+
+            if (mm < 10) {
+                mm = '0' + mm;
+            }
+
+            picker.set_value(mm + '/' + dd + '/' + yyyy);
+            picker.set_enabled(false);
+
+           
+        }
+
+        function DisableFollowUpFields(shiftDate, shiftEnd) {
+            if ($('#followUpCaseShiftWrapper').is(':visible') === true) {
+
+                // DIsable Fields if not Converage Case
+                $('#followUpCaseShiftTimeIn').val('N/A').attr('disabled', true).trigger('change');
+                $('#followUpCaseShiftTimeOut').val('N/A').attr('disabled', true).trigger('change');
+                $('#followUpCaseNotified').val('N/A').attr('disabled', true).trigger('change');
+
+                resetDateFields(shiftDate);
+                resetDateFields(shiftEnd);
+            }
+        }
+
+        function OpenFollowUpFields(shiftDate, shiftEnd) {
+            if ($('#followUpCaseShiftTimeIn').val() === "N/A") {
+                $('#followUpCaseShiftTimeIn').val('');
+            }
+            $('#followUpCaseShiftTimeIn').attr('disabled', false);
+
+            if ($('#followUpCaseShiftTimeIn').val() === "N/A") {
+                $('#followUpCaseShiftTimeIn').val('');
+            }
+            $('#followUpCaseShiftTimeIn').attr('disabled', false);
+
+            if ($('#followUpCaseShiftTimeOut').val() === "N/A") {
+                $('#followUpCaseShiftTimeOut').val('');
+            }
+            $('#followUpCaseShiftTimeOut').attr('disabled', false);
+
+            if ($('#followUpCaseNotified').val() === "N/A") {
+                $('#followUpCaseNotified').val('');
+            }
+            $('#followUpCaseNotified').attr('disabled', false);
+
+
+            shiftDate.set_enabled(true);
+            shiftEnd.set_enabled(true);
+        }
+
+        /*============================================================================
+       Events
+       =============================================================================*/
+        $(document).ready(function () {
+            prm = Sys.WebForms.PageRequestManager.getInstance();
+            prm.add_initializeRequest(initializeRequest);
+            prm.add_endRequest(endRequest);
+
+            $('#infoWrapper').toggle('fade');
+
+            var queryString = window.location.search;
+            queryString = queryString.substr(1);
+            var queries = queryString.split("&");
+
+            if (queries[1] !== undefined) {
+                var success = queries[1].split("=");
+
+                if (success[1] !== undefined) {
+                    if (success[1] === "true") {
+                        $('#infoWrapper').css('margin-top', '75px').delay(10900).animate({ marginTop: 0 });
+                        $('#successMessage').text("The Case has been saved");
+                        $('#editCaseSuccessPanel').toggle('fade').delay(10000).fadeOut(1000);
+                    } else if (success[1] === "false") {
+
+                        $('#errorMessagePanel').toggle('fade').delay(10000).fadeOut(1000);
+                        $('#infoWrapper').css('margin-top', '75px').delay(10900).animate({ marginTop: 0 });
+                    }
+                }
+            }
+
+            // Control Functionality
+
+            // Case Error Checkbox
+            $(document.body).on('click', '#caseError', function () {
+                if ($(this).is(":checked") === true) {
+
+                    // Disable Fields if control is unchecked
+                    // Set Values if they control value is  there is no value
+                    $('.formDDL:visible').each(function () {
+                        var id = $(this).attr('id');
+
+                        if (id !== 'editCaseType' && id !== 'editRegion') {
+                            if ($(this).val() === "") {
+                                $(this).val("N/A").attr('disabled', true).trigger('change');
+                            } else {
+                                $(this).attr('disabled', true).trigger('change');
+                            }
+                        }
+                    });
+                    if ($('#notifiedWrapper').is(':visible') === true && $('#editNotified').val() === "") {
+                            $('#editNotified').val("N/A").attr('disabled', true).trigger('change');
+                        } else {
+                            $('#editNotified').attr('disabled', true);
+                        }
+
+                    if ($('#editShiftWrapper').is(':visible') === true) {
+                        var shiftDate = $find("<%=editShiftDate.ClientID%>");
+                        var shiftEnd = $find("<%=editShiftEndDate.ClientID%>");
+
+                        if (shiftDate.get_text() === "") {
+                            resetDateFields(shiftDate);
+                        } else {
+                            shiftDate.set_enabled(false);
+                        }
+
+                        if (shiftEnd.get_text() === "") {
+                            resetDateFields(shiftEnd);
+
+                        } else {
+                            shiftEnd.set_enabled(false);
+                        }
+
+                       
+                    }
+                } else {
+                    
+                    // Enable Fields if control is unchecked
+                    // Set Values if they control value is N/A
+                    $('.formDDL:visible').each(function () {
+                        var id = $(this).attr('id');
+
+                        if (id !== 'editCaseType' && id !== 'editRegion') {
+                            if ($(this).val() === "N/A") {
+                                $(this).val("").attr('disabled', false).trigger('change');
+                            } else {
+                                $(this).attr('disabled', false).trigger('change');
+                            }
+                        }
+                    });
+
+                    if ($('#notifiedWrapper').is(':visible') === true && $('#editNotified').val() === "N/A") {
+                        $('#editNotified').val("").attr('disabled', false).trigger('change');
+                    } else {
+                        $('#editNotified').attr('disabled', false).trigger('change');
+                    }
+
+                    var picker = $find("<%=editShiftDate.ClientID%>");
+                    var shiftEnd = $find("<%=editShiftEndDate.ClientID%>");
+
+                    picker.set_enabled(true);
+                    shiftEnd.set_enabled(true);
+                }
+            });
+
+            // Follow Up Case Error
+            $(document.body).on('click', '#followUpCaseError', function () {
+
+                var shiftDate = $find("<%=followUpCaseShiftDate.ClientID%>");
+                var shiftEnd = $find("<%=followUpCaseShiftEndDate.ClientID%>");
+
+                if ($(this).is(":checked") === true) {
+                    $('#followUpCaseReason').val('N/A').attr('disabled', true);
+
+                    DisableFollowUpFields(shiftDate, shiftEnd);
+
+                } else {
+
+                    $('#followUpCaseReason').val('').attr('disabled', false);
+                    if ($('#followUpCaseShiftWrapper').is(':visible') === true) {
+                        OpenFollowUpFields(shiftDate, shiftEnd);
+                    }
+
+                }
+
+             });
+
+
+            // Follow Up Reason Drop Down
+            $(document.body).on('change', '#followUpCaseReason', function () {
+                
+                var reasonID = parseInt($(this).val());
+
+                if ($('#followUpReasonValidator').is(":visible") === true && $(this).val() !== "N/A") {
+                    $('#followUpReasonValidator').hide();
+                }
+
+                    var shiftDate = $find("<%=followUpCaseShiftDate.ClientID%>");
+                    var shiftEnd = $find("<%=followUpCaseShiftEndDate.ClientID%>");
+
+                    if (((reasonID >= 27 && reasonID <= 31) || reasonID === 93) && reasonChange === true) {
+                        OpenFollowUpFields(shiftDate, ShiftEnd);
+                    } else if (reasonID === 86) {
+                        // If case is disregarded
+                        // Check if values have been entered, if not, set value to N/A
+                        if ($('#followUpCaseShiftTimeIn').val() === "") {
+                            $('#followUpCaseShiftTimeIn').val('N/A');
+                        }
+                        $('#followUpCaseShiftTimeIn').attr('disabled', true).trigger('change');
+
+                        if ($('#followUpCaseShiftTimeIn').val() === "") {
+                            $('#followUpCaseShiftTimeIn').val('N/A');
+                        }
+                        $('#followUpCaseShiftTimeIn').attr('disabled', true).trigger('change');
+
+                        if ($('#followUpCaseShiftTimeOut').val() === "") {
+                            $('#followUpCaseShiftTimeOut').val('N/A');
+                        }
+                        $('#followUpCaseShiftTimeOut').attr('disabled', true).trigger('change');
+
+                        if ($('#followUpCaseNotified').val() === "") {
+                            $('#followUpCaseNotified').val('N/A');
+                        }
+                        $('#followUpCaseNotified').attr('disabled', true).trigger('change');
+
+                        if (shiftDate.get_text() === "") {
+                            resetDateFields(shiftDate);
+                        } else {
+                            shiftDate.set_enabled(false);
+                        }
+
+                        if (shiftEnd.get_text() === "") {
+                            resetDateFields(shiftEnd);
+                        } else {
+                            shiftEnd.set_enabled(false);
+                        }
+                    } else if(reasonID >= 31 && reasonID !== 86 && reasonID !== 93 ){
+                        DisableFollowUpFields(shiftDate, shiftEnd);
+                    }
+
+                    reasonChange = true;
+            });
+            
+            // Enter Key
+            $(document.body).on('keydown', function (e) {
+                if (e.which == 13) {
+                    if (followUp === true) {
+                        if (enterNewCaseInfo === false && $('#employeeSearchResultsGrid').is(':visible') === false) {
+                            $('#newCaseSearchBtn').focus();
+
+                        } else if (enterNewCaseInfo === false && $('#employeeSearchResultsGrid').is(':visible') === true) {
+                            $('#newFollowUpCaseNextBtn').focus();
+                        }
+                        else if (enterNewCaseInfo === true) {
+                            if ($('#followUpCaseNotes').is(':focus') === false) {
+                                $('#followUpCaseSubmitBtn').focus();
+                            }
+                        }
+                    } else if (edit === true) {
+                        if ($('#editNotes').is(':focus') === false) {
+                            $('#caseSubmitBtn').focus();
+                        }
+                    } else if (escalation === true) {
+                        $('#escSubmitBtn').focus();
+                    }
+                }
+            });
+        });
+    </script>
+</asp:Content>
