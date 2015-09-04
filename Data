@@ -1,0 +1,80 @@
+Imports System.Data.SqlClient
+
+
+Public Class Data
+    Private Shared configString As String = ConfigurationManager.ConnectionStrings("sccrmConnection").ConnectionString
+
+    Protected Function getData(ByVal procedureName As String, Optional ByVal parameters As Dictionary(Of String, Object) = Nothing)
+        Dim data As New DataTable
+        Using con As New SqlConnection(configString)
+            Using cmd As New SqlCommand(procedureName, con)
+                cmd.CommandType = CommandType.StoredProcedure
+                If parameters IsNot Nothing Then
+                    For Each Parameter In parameters
+                        cmd.Parameters.AddWithValue(Parameter.Key, Parameter.Value)
+                    Next
+                End If
+
+                con.Open()
+                Using adpt As New SqlDataAdapter(cmd)
+                    adpt.Fill(data)
+                End Using
+            End Using
+        End Using
+        Return data
+    End Function
+    Protected Function setData(ByVal procedureName As String, Optional ByVal parameters As Dictionary(Of String, Object) = Nothing)
+        Dim data As New Object
+        Using con As New SqlConnection(configString)
+            Using cmd As New SqlCommand(procedureName, con)
+                cmd.CommandType = CommandType.StoredProcedure
+                If parameters IsNot Nothing Then
+                    For Each Parameter In parameters
+                        cmd.Parameters.AddWithValue(Parameter.Key, Parameter.Value)
+                    Next
+                End If
+
+                con.Open()
+                data = cmd.ExecuteScalar()
+            End Using
+        End Using
+        Return data
+    End Function
+    Protected Sub ExecuteNonQuery(ByVal procedureName As String, Optional ByVal parameters As Dictionary(Of String, Object) = Nothing)
+
+        Using con As New SqlConnection(configString)
+            Using cmd As New SqlCommand(procedureName, con)
+                cmd.CommandType = CommandType.StoredProcedure
+                If parameters IsNot Nothing Then
+                    For Each Parameter In parameters
+                        cmd.Parameters.AddWithValue(Parameter.Key, Parameter.Value)
+                    Next
+                End If
+
+                con.Open()
+                cmd.ExecuteNonQuery()
+            End Using
+        End Using
+
+    End Sub
+    Protected Function ReturnValue(ByVal procedureName As String, Optional ByVal parameters As Dictionary(Of String, Object) = Nothing)
+        Dim value As Object = Nothing
+        Using con As New SqlConnection(configString)
+            Using cmd As New SqlCommand(procedureName, con)
+                cmd.CommandType = CommandType.StoredProcedure
+                If parameters IsNot Nothing Then
+                    For Each Parameter In parameters
+                        cmd.Parameters.AddWithValue(Parameter.Key, Parameter.Value)
+                    Next
+                End If
+
+                con.Open()
+                value = cmd.ExecuteScalar
+            End Using
+        End Using
+        Return value
+    End Function
+  
+
+
+End Class
