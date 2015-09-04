@@ -1,0 +1,852 @@
+Imports System.Net.Mail
+
+Public Class _Case
+    Inherits Data
+    Implements ICase
+
+
+    Private caseNumber As String = String.Empty
+    Private regionID As String = String.Empty
+    Private region As String = String.Empty
+    Private plazaID As String = String.Empty
+    Private plaza As String = String.Empty
+    Private caseTypeID As String = String.Empty
+    Private caseType As String = String.Empty
+    Private reasonID As String = String.Empty
+    Private reason As String = String.Empty
+    Private positionID As String = String.Empty
+    Private position As String = String.Empty
+    Private shiftDate As String = String.Empty
+    Private shiftTimeIn As String = String.Empty
+    Private shiftTimeOut As String = String.Empty
+    Private notified As String = String.Empty
+    Private status As String = String.Empty
+    Private notes As String = String.Empty
+    Private employeeID As String = Nothing
+    Private userID As String = String.Empty
+    Private caseError As Boolean = False
+    Private employeeName As String = String.Empty
+    Private caseDate As String = String.Empty
+    Private shiftEndDate As String = String.Empty
+    Private edit As Boolean = False
+    Private _createCase As Boolean = False
+    Private _completeCase As Boolean = False
+    Private _emailCase As Boolean = False
+    Private _escalate As Boolean = False
+    Private previousReason As String = String.Empty
+    Private escalationMessage As String = String.Empty
+
+
+    '' Constructors
+    Public Sub New()
+
+    End Sub
+
+    Public Sub New(ByVal Case_Number As Integer)
+        caseNumber = Case_Number
+    End Sub
+
+    Public Sub New(ByVal region As String, ByVal caseType As String, ByVal user_ID As String, Optional ByVal employee_ID As String = "")
+        regionID = region
+        caseTypeID = caseType
+        userID = user_ID
+        employeeID = employee_ID
+
+    End Sub
+
+    '' Properties
+    Public Property Case_Number() As String
+        Get
+            Return caseNumber
+        End Get
+        Set(value As String)
+            caseNumber = value
+        End Set
+    End Property
+    Public Property Region_ID() As String
+        Get
+            Return regionID
+        End Get
+        Set(value As String)
+            regionID = value
+        End Set
+    End Property
+    Public Property Region_() As String
+        Get
+            Return region
+        End Get
+        Set(value As String)
+            region = value
+        End Set
+    End Property
+    Public Property Plaza_ID() As String
+        Get
+            Return plazaID
+        End Get
+        Set(value As String)
+            plazaID = value
+        End Set
+    End Property
+    Public Property Plaza_() As String
+        Get
+            Return plaza
+        End Get
+        Set(value As String)
+            plaza = value
+        End Set
+    End Property
+    Public Property Case_TypeID() As String
+        Get
+            Return caseTypeID
+        End Get
+        Set(value As String)
+            caseTypeID = value
+        End Set
+    End Property
+    Public Property Case_Type() As String
+        Get
+            Return caseType
+        End Get
+        Set(value As String)
+            caseType = value
+        End Set
+    End Property
+    Public Property Reason_ID() As String
+        Get
+            Return reasonID
+        End Get
+        Set(value As String)
+            reasonID = value
+        End Set
+    End Property
+    Public Property Reason_() As String
+        Get
+            Return reason
+        End Get
+        Set(value As String)
+            reason = value
+        End Set
+    End Property
+    Public Property Shift_Date() As String
+        Get
+            Return shiftDate
+        End Get
+        Set(value As String)
+            shiftDate = value
+        End Set
+    End Property
+    Public Property Shift_EndDate() As String
+        Get
+            Return shiftEndDate
+        End Get
+        Set(value As String)
+            shiftEndDate = value
+        End Set
+    End Property
+    Public Property Shift_TimeIn() As String
+        Get
+            Return shiftTimeIn
+        End Get
+        Set(value As String)
+            shiftTimeIn = value
+        End Set
+    End Property
+    Public Property Shift_TimeOut() As String
+        Get
+            Return shiftTimeOut
+        End Get
+        Set(value As String)
+            shiftTimeOut = value
+        End Set
+    End Property
+    Public Property Notified_() As String
+        Get
+            Return notified
+        End Get
+        Set(value As String)
+            notified = value
+        End Set
+    End Property
+    Public Property Status_() As String
+        Get
+            Return status
+        End Get
+        Set(value As String)
+            status = value
+        End Set
+    End Property
+    Public Property Notes_() As String
+        Get
+            Return notes
+        End Get
+        Set(value As String)
+            notes = value
+        End Set
+    End Property
+    Public Property Employee_ID() As String
+        Get
+            Return employeeID
+        End Get
+        Set(value As String)
+            employeeID = value
+        End Set
+    End Property
+    Public Property User_ID() As String
+        Get
+            Return userID
+        End Get
+        Set(value As String)
+            userID = value
+        End Set
+    End Property
+    Public WriteOnly Property Case_Error() As String
+        Set(value As String)
+            caseError = value
+        End Set
+    End Property
+
+    Public Property Employee_Name() As String
+        Get
+            Return employeeName
+        End Get
+        Set(value As String)
+            employeeName = value
+        End Set
+    End Property
+    Public Property Position_ID() As String
+        Get
+            Return positionID
+        End Get
+        Set(value As String)
+            positionID = value
+        End Set
+    End Property
+    Public Property Position_() As String
+        Get
+            Return position
+        End Get
+        Set(value As String)
+            position = value
+        End Set
+    End Property
+    Public Property Case_Date() As String
+        Get
+            Return caseDate
+        End Get
+        Set(value As String)
+            caseDate = value
+        End Set
+    End Property
+    Public WriteOnly Property Email_Case() As String
+        Set(value As String)
+            _emailCase = value
+        End Set
+    End Property
+    Public WriteOnly Property Escalation_Message() As String
+        Set(value As String)
+            escalationMessage = value
+        End Set
+    End Property
+    Public WriteOnly Property Previous_Reason() As String
+        Set(value As String)
+            previousReason = value
+        End Set
+    End Property
+    Public Sub AssignCase()
+        Dim parameters As New Dictionary(Of String, Object)
+        If userID <> String.Empty Then
+            parameters.Add("@UserID", userID)
+        Else
+            parameters.Add("@UserID", DBNull.Value)
+        End If
+
+        parameters.Add("@CaseNumber", caseNumber)
+
+        MyBase.ExecuteNonQuery("sp_Assign_Case", parameters)
+    End Sub
+    Public Sub CaseChange(ByVal change As String, ByVal changeType As Integer) Implements ICase.CaseChange
+
+        Dim parameters As New Dictionary(Of String, Object)
+        parameters.Add("@UserID", userID)
+        parameters.Add("@CaseNumber", caseNumber)
+        parameters.Add("@ChangeType", changeType)
+        parameters.Add("@ChangesMade", change)
+        MyBase.ExecuteNonQuery("sp_Add_Case_Changes", parameters)
+    End Sub
+
+    Public Function CaseSearch() As DataTable
+        Dim parameters As New Dictionary(Of String, Object)
+        If caseNumber <> String.Empty Then
+            parameters.Add("@CaseNumber", caseNumber)
+        Else
+            parameters.Add("@CaseNumber", DBNull.Value)
+        End If
+
+        If regionID <> String.Empty Then
+            parameters.Add("@RegionID", regionID)
+        Else
+            parameters.Add("@RegionID", DBNull.Value)
+        End If
+
+        If plazaID <> String.Empty Then
+            parameters.Add("@PlazaID", plazaID)
+        Else
+            parameters.Add("@PlazaID", DBNull.Value)
+        End If
+
+        If status <> String.Empty Then
+            parameters.Add("@Status", status)
+        Else
+            parameters.Add("@Status", DBNull.Value)
+        End If
+
+        If shiftDate <> String.Empty Then
+            parameters.Add("@ShiftDate", shiftDate)
+        Else
+            parameters.Add("@ShiftDate", DBNull.Value)
+        End If
+
+        If caseDate <> String.Empty Then
+            parameters.Add("@DateEntered", caseDate)
+        Else
+            parameters.Add("@DateEntered", DBNull.Value)
+        End If
+
+        If userID <> String.Empty Then
+            parameters.Add("@UserID", userID)
+        Else
+            parameters.Add("@UserID", DBNull.Value)
+        End If
+
+        If employeeID <> String.Empty Then
+            parameters.Add("@EmployeeID", employeeID)
+
+        Else
+            parameters.Add("@EmployeeID", DBNull.Value)
+        End If
+
+        Return MyBase.getData("sp_CaseSearch", parameters)
+
+    End Function
+
+    Public Sub CloseCase()
+        Dim parameters As Dictionary(Of String, Object) = SetParameters()
+        parameters.Add("@UpdatedBy", userID)
+        parameters.Add("@CaseNumber", caseNumber)
+
+        MyBase.ExecuteNonQuery("sp_Close_Case", parameters)
+    End Sub
+
+    Public Sub COmpleteCase() Implements ICase.CompleteCase
+        _completeCase = True
+        Dim parameters As Dictionary(Of String, Object) = SetParameters()
+        MyBase.ExecuteNonQuery("sp_Update_Additional_Case_Information", parameters)
+
+        '' Email New Case Template if reason is not disregard
+        If reasonID <> String.Empty Then
+            If Integer.Parse(reasonID) < 82 Or Integer.Parse(reasonID) > 91 Then
+                EmailTemplate()
+            End If
+        End If
+
+
+    End Sub
+
+    Public Sub CreateCase() Implements ICase.CreateCase
+        _createCase = True
+        Dim parameters As Dictionary(Of String, Object) = SetParameters()
+        parameters.Add("@EnteredBy", userID)
+        caseNumber = MyBase.setData("sp_Create_New_Case_New", parameters).ToString()
+    End Sub
+
+    Public Sub EditCase() Implements ICase.EditCase
+        edit = True
+        Dim parameters As Dictionary(Of String, Object) = SetParameters()
+        parameters.Add("@UpdatedBy", userID)
+        parameters.Add("@CaseError", caseError)
+        parameters.Add("@Status", status)
+        MyBase.ExecuteNonQuery("sp_Edit_Case_New", parameters)
+
+        If _emailCase = True Then
+            '' After editing, if case is disregarded change reason for template
+            If reasonID <> String.Empty Then
+                If Integer.Parse(reasonID) >= 82 And Integer.Parse(reasonID) <= 91 And caseError = False Then
+                    reason = previousReason
+                End If
+            End If
+
+            EmailTemplate()
+        End If
+
+    End Sub
+
+    Public Sub EmailTemplate() Implements ICase.EmailTemplate
+        '' if Case is not Miscellaneous or Request for work
+        If reasonID <> String.Empty Then
+            If Integer.Parse(caseTypeID) <> 9 And Integer.Parse(caseTypeID) <> 10 And status <> "Closed" Then
+                SendTemplate()
+            End If
+        End If
+
+    End Sub
+    Public Sub Escalate()
+        _escalate = True
+        RetrieveIDInformation()
+        SendTemplate()
+    End Sub
+
+    Public Sub ExitCase() Implements ICase.ExitCase
+        Dim parameters As New Dictionary(Of String, Object)
+        parameters.Add("@CaseNumber", caseNumber)
+        parameters.Add("UserID", userID)
+
+        MyBase.ExecuteNonQuery("sp_Exit_Case", parameters)
+    End Sub
+
+    Public Function GetCaseInformation() As DataTable Implements ICase.GetCaseInformation
+        Dim parameters As New Dictionary(Of String, Object)
+        parameters.Add("@CaseNumber", caseNumber)
+
+        Return MyBase.getData("sp_Retrieve_Case_Information", parameters)
+    End Function
+    Public Function GetCaseFollowUps() As DataTable
+        Dim parameters As New Dictionary(Of String, Object)
+        parameters.Add("@CaseNumber", caseNumber)
+
+        Return MyBase.getData("sp_Retrieve_Case_FollowUp_Information", parameters)
+    End Function
+    Public Sub ResendTemplate() Implements ICase.ResendTemplate
+        RetrieveIDInformation()
+        SendTemplate()
+    End Sub
+
+    Private Function GetTemplateAddresses() As DataTable
+        Dim parameters As New Dictionary(Of String, Object)
+        parameters.Add("@Region", regionID)
+        parameters.Add("@Plaza", plazaID)
+        Return MyBase.getData("sp_Get_Email_Addresses", parameters)
+
+
+    End Function
+
+    Private Sub RetrieveIDInformation()
+        '' Determine region id
+        Dim __region As New Region()
+        __region.Region_Name = region
+        regionID = __region.GetRegionID
+
+        ''Determine plaza id
+        Dim __plaza As New Plaza()
+        __plaza.Region_ID = regionID
+        __plaza.Plaza_Name = plaza
+        plazaID = __plaza.GetPlazaID
+
+        '' Determine CaseType
+        Dim __caseType As New CaseType()
+        __caseType.CaseType_Name = caseType
+        caseTypeID = __caseType.GetCaseTypeID
+
+        ''Determine reason id
+        Dim __reason As New Reason()
+        __reason.CaseType_ID = caseTypeID
+        __reason.Reason_ = reason
+        reasonID = __reason.GetReasonID
+    End Sub
+
+    Private Sub SendTemplate() Implements ICase.SendTemplate
+        Try
+
+            Dim addressString As String = String.Empty
+            Dim ccString = String.Empty
+            Dim bccString = String.Empty
+            Dim addressTable As New DataTable
+            Dim subject As New StringBuilder()
+            Dim body As New StringBuilder()
+            Dim caseHeading As String = String.Empty
+            Dim openingDate As String = String.Empty
+            Dim timeIn As String = String.Empty
+            Dim timeOut As String = String.Empty
+
+            '' Retrieve USer Information from Forms Authentication ticket/////////////////////////////////////
+            Dim user As FormsIdentity = DirectCast(HttpContext.Current.User.Identity, FormsIdentity)
+            Dim ticket As FormsAuthenticationTicket = user.Ticket
+            Dim userData() As String = ticket.UserData.Split(",")
+
+
+            Dim name As String = userData(0)
+            Dim email As String = userData(1)
+            Dim phone As String = userData(2)
+            Dim userTitle As String = userData(3)
+
+            Dim timecalled As String = Format(Date.Parse(caseDate), " MM/dd/yyyy HH:mm tt")
+
+            '' FOrmat Case Number/////////////////////////////////////////////////////////////////////////////
+            Dim caseNum As String = String.Empty
+
+            If caseNumber.Length < 6 Then
+                For I As Integer = 0 To (6 - caseNumber.Length - 1) Step 1
+                    caseNum = caseNum & "0"
+                Next
+            End If
+            caseNum = caseNum & caseNumber
+
+            '' Set Addresses////////////////////////////////////////////////////////////////////////////////
+            '' If Time Off Case
+            If Integer.Parse(caseTypeID) = 8 Then
+                If Integer.Parse(regionID) <> 2 Then
+                    '' Get Template Addresses for the specifed plaza
+                    Dim parameters As New Dictionary(Of String, Object)
+                    parameters.Add("@Region", regionID)
+                    addressTable = MyBase.getData("sp_Retrieve_Region_Vacation_Specialist_Email", parameters)
+
+                    If Not IsDBNull(addressTable.Rows(0).Item(0)) Then
+                        addressString = addressTable.Rows(0).Item(0)
+                    End If
+                Else
+                    addressString = "ANunez@Faneuil.onmicrosoft.com;Ivette.Caballero@Faneuil.com"
+                End If
+                ccString = "Christopher.White@faneuil.com;Thedy.Mitchell@faneuil.com;Demond.Gibson@faneuil.com;Donna.Frazier@faneuil.com"
+
+                '' Create Templ
+            Else
+                '' Get Template Addresses for the specifed plaza
+                Dim parameters As New Dictionary(Of String, Object)
+                parameters.Add("@Region", regionID)
+                parameters.Add("@Plaza", plazaID)
+                addressTable = MyBase.getData("sp_Get_Email_Addresses", parameters)
+
+                For Each column As DataColumn In addressTable.Columns
+                    If Not IsDBNull(addressTable.Rows(0).Item(column.ColumnName)) Then
+                        Select Case column.ColumnName
+                            Case "Addresses"
+                                addressString = addressTable.Rows(0).Item(column.ColumnName)
+                            Case "CC_Addresses"
+                                ccString = addressTable.Rows(0).Item(column.ColumnName)
+                            Case "BCC_Addresses"
+                                bccString = addressTable.Rows(0).Item(column.ColumnName)
+                        End Select
+                    End If
+                Next
+            End If
+
+            If ccString.IndexOf(email) = -1 And addressString.IndexOf(email) = -1 Then
+                If ccString <> String.Empty Then
+                    ccString = ccString & ";" & email
+                Else
+                    ccString = email
+                End If
+            End If
+            '' Create Template ////////////////////////////////////////////////////////////////////
+            '' Subject
+            If Integer.Parse(caseTypeID) = 8 Then
+                plaza = "N/A"
+                If Integer.Parse(reasonID) >= 82 And Integer.Parse(reasonID) <= 91 Then
+                    subject.Append("DISREGARD - ")
+                ElseIf edit = True Then
+                    subject.Append("UPDATED - ")
+                End If
+
+                subject.Append("Time Off Request: ")
+                subject.Append(employeeName)
+                subject.Append(" - ")
+                subject.Append(timecalled)
+                caseHeading = "Time Off Request"
+           Else
+                openingDate = Format(Date.Parse(shiftDate), "MM/dd/yyyy")
+                timeIn = Format(Date.Parse(shiftTimeIn), "MM/dd/yyyy HH:mm tt")
+                timeOut = Format(Date.Parse(shiftTimeOut), "MM/dd/yyyy HH:mm tt")
+                If _escalate = True Then
+                    subject.Append("Escalation - ")
+                    subject.Append(region)
+                    caseHeading = "Escalation"
+                Else
+
+                    If Integer.Parse(reasonID) >= 82 And Integer.Parse(reasonID) <= 91 Then
+                        subject.Append("DISREGARD - ")
+                    ElseIf edit = True Then
+                        subject.Append("UPDATED - ")
+                    End If
+                    Select Case Integer.Parse(caseTypeID)
+                        Case 1
+                            subject.Append("Call Information (")
+                            caseHeading = "Call Off Information"
+                        Case 2
+                            subject.Append("Late Information (")
+                            caseHeading = "Late Information"
+                        Case 3
+                            subject.Append("Left Early Information (")
+                            caseHeading = "Left Early Information"
+                        Case 4
+                            subject.Append("No Call/No Show Information (")
+                            caseHeading = "No Call/ No Show Information"
+                        Case 6
+                            subject.Append("Permanent Opening Information (")
+                            caseHeading = "Permanent Opening Information"
+                        Case 7
+                            subject.Append("Schedule Change (")
+                            caseHeading = "Schedule Change"
+                        Case Else
+                            subject.Append("Case Information (")
+                            caseHeading = "Case Information"
+                    End Select
+
+                    subject.Append(openingDate)
+                    subject.Append(", ")
+                    subject.Append(plaza)
+                    subject.Append(", ")
+                    subject.Append(timeIn)
+                    subject.Append(" - ")
+                    subject.Append(timeOut)
+                    subject.Append(", ")
+                    subject.Append(caseNum)
+                    subject.Append(")")
+
+                End If
+            End If
+
+            '' Body
+            body.Append("<p style=""font-family:Arial, Sans-Serif;""><strong>Notice: This is a system generated email. For more information on this case, please contact the representative listed.</strong></p>")
+
+            If _escalate = True Then
+                body.Append(escalationMessage)
+            End If
+
+            body.Append("<div style=""width:100%;border-top: 1px solid #ddd;border-bottom:1px solid #ddd;""<h1 style=""margin-top:25px;font-family:Arial,Sans-Serif"">Case Number: ")
+            body.Append(caseNum)
+            body.Append("</h1></div><h2>")
+            body.Append(caseHeading)
+            body.Append("</h2><table style=""font-family:Arial, Sans-Serif;font-size:12px;width:100%;border-bottom: 1px solid #ddd; border-top: 1px solid #ddd;"">")
+
+            If Integer.Parse(caseTypeID) <> 6 Then
+                body.Append("<tr><td style=""padding:5px;"">Emloyee Name:</td><td style=""padding:5px;"">")
+                body.Append(employeeName)
+                body.Append("</td></tr>")
+                body.Append("<tr style=""background-color:#D7E4BC;""><td style=""padding:5px;"">Employee ID #:</td><td style=""padding:5px;"">")
+                body.Append(employeeID)
+                body.Append("</td></tr>")
+            End If
+            body.Append("<tr><td style=""padding:5px;"">Date/Time Called:</td><td>")
+            body.Append(timecalled)
+            body.Append("</td></tr>")
+
+            body.Append("<tr style=""background-color:#D7E4BC;""><td style=""padding:5px;"">Position:</td><td style=""padding:5px;""> ")
+            body.Append(position)
+            body.Append("</td></tr>")
+
+            body.Append("<tr><td style=""padding:5px;"">Plaza:<td style=""padding:5px;"">")
+            body.Append(plaza)
+            body.Append("</td></tr>")
+
+            If Integer.Parse(caseTypeID) <> 8 Then
+
+                body.Append("<tr style=""background-color:#D7E4BC;""><td style=""padding:5px;"">Date od Opening:<td style=""padding:5px;"">")
+                body.Append(openingDate)
+                body.Append("</td></tr>")
+
+                body.Append("<tr><td style=""padding:5px;"">Time In:<td style=""padding:5px;"">")
+                body.Append(timeIn)
+                body.Append("</td></tr>")
+
+                body.Append("<tr style=""background-color:#D7E4BC;""><td style=""padding:5px;"">Time Out:<td style=""padding:5px;"">")
+                body.Append(timeOut)
+                body.Append("</td></tr>")
+
+                body.Append("<tr><td style=""padding:5px;"">Reason:<td style=""padding:5px;"">")
+                body.Append(reason)
+                body.Append("</td></tr>")
+
+                If Integer.Parse(caseTypeID) <> 6 Then
+                    body.Append("<tr style=""background-color:#D7E4BC;""><td style=""padding:5px;"">Notified:<td style=""padding:5px;"">")
+                    body.Append(notified)
+                    body.Append("</td></tr>")
+                End If
+
+            Else
+                body.Append("<tr style=""background-color:#D7E4BC;""><td style=""padding:5px;"">Reason:<td style=""padding:5px;"">")
+                body.Append(reason)
+                body.Append("</td></tr>")
+
+            End If
+
+            body.Append("<tr><td colspan=""2"" style=""padding:5px;"">Notes:</td></tr><tr><td colspan=""2"" style=""padding:5px;"">")
+            body.Append(notes)
+            body.Append("</td></tr>")
+
+            body.Append("</table>")
+
+            If _escalate = True Then
+                Dim followUps As DataTable = GetCaseFollowUps()
+
+                body.Append("<h2>Case History</h2>")
+                body.Append("<table style=""font-family:Arial, Sans-Serif; font-size:12;border-bottom: 1px solid #ddd; width:100%; margin: 0 auto;""><tr>")
+                body.Append("<th style=""text-align:left; padding-left: 5px;"">Date/Time</th>")
+                body.Append("<th style=""text-align:left;padding-left: 5px;"">CSR</th>")
+                body.Append("<th style=""text-align:left;padding-left: 5px;"">Last Name</th>")
+                body.Append("<th style=""text-align:left;padding-left: 5px;"">First Name</th>")
+                body.Append("<th>MI</th><th style=""text-align:left;padding-left: 5px;"">Result</th>")
+                body.Append("<th style=""text-align:left;padding-left: 5px;"">Shift/Time In</th>")
+                body.Append("<th style=""text-align:left;padding-left: 5px;"">Shift/Time Out</th>")
+                body.Append("</tr>")
+
+                Dim j As Integer = 0
+                For Each row As DataRow In followUps.Rows
+                    Dim enterDate = Format(Date.Parse(row.Item(1)), "MM/dd/yyyy hh:mm tt")
+                    Dim csr = row.Item(2)
+                    Dim result As String = String.Empty
+                    Dim fName As String = String.Empty
+                    Dim lName As String = String.Empty
+                    Dim mi As String = String.Empty
+                    Dim shiftIn As String = String.Empty
+                    Dim shiftOut As String = String.Empty
+
+                    If IsDBNull(row.Item(3)) Then
+                        lName = "N/A"
+                    Else
+                        lName = row.Item(3)
+                    End If
+
+                    If IsDBNull(row.Item(4)) Then
+                        fName = "N/A"
+                    Else
+                        fName = row.Item(4)
+                    End If
+
+                    If IsDBNull(row.Item(5)) Then
+                        mi = "X"
+                    Else
+                        mi = row.Item(5)
+                    End If
+
+                    If IsDBNull(row.Item(7)) Then
+                        shiftIn = "N/A"
+                    Else
+                        shiftIn = Format(Date.Parse(row.Item(7)), "MM/dd/yyyy HH:mm tt")
+                    End If
+
+                    If IsDBNull(row.Item(8)) Then
+                        shiftOut = "N/A"
+                    Else
+                        shiftOut = Format(Date.Parse(row.Item(8)), "MM/dd/yyy HH:mm tt")
+                    End If
+
+                    If Not IsDBNull(row.Item(12)) Then
+                        Dim re As String = row.Item(12)
+                        Dim r() As String = re.Split("-")
+                        If r(0).IndexOf("Covering shift for") <> -1 Then
+                            result = "Shift Coverage"
+                        Else
+                            result = r(0)
+                        End If
+
+                    End If
+
+                    Dim tableROw As String = String.Empty
+                    If j Mod 2 = 0 Then
+                        tableROw = "<tr style=""background-color:#ddd""><td style=""padding-left: 5px;"">{0}</td><td style=""padding-left: 5px;"">{1}</td><td style=""padding-left:" & _
+                        "5px;"">{2}</td><td style=""padding-left: 5px;"">{3}</td><td style=""text-align:center;"">{4}" & _
+                        " </td><td style=""padding-left: 5px;"">{5}</td><td style=""padding-left: 5px;"">{6}</td><td style=""padding-left: 5px;"">" & _
+                        "{7}</td></tr>"
+                    Else
+                        tableROw = "<tr><td style=""padding-left: 5px;"">{0}</td><td style=""padding-left: 5px;"">{1}</td><td style=""padding-left:" & _
+                        "5px;"">{2}</td><td style=""padding-left: 5px;"">{3}</td><td style=""text-align:center;"">{4}" & _
+                        " </td><td style=""padding-left: 5px;"">{5}</td><td style=""padding-left: 5px;"">{6}</td><td style=""padding-left: 5px;"">" & _
+                        "{7}</td></tr>"
+                    End If
+
+                    body.Append(String.Format(tableROw, enterDate, csr, lName, fName, mi, result, shiftIn, shiftOut))
+                    j = j + 1
+                Next
+                body.Append("</table>")
+            End If
+
+            Dim closing As String = "<br /><p style=""text-align:left;font-family:Gerogia; font-size:14px;""><span style=""font-weight:bold;font-size:18px;"">" & _
+                "{0}</span><br /> Faneuil, Inc. -  {1}<br /> 7700 Southland Blvd, Suite 250 <br /> Orlando, FL 32809 <br /> {2}<br /> Office: {3} </p>" & _
+             "<p style=""text-align:center;font-family:Gerogia; font-size:12px;""><span style=""font-weight:bold;color:#99b53c;"">""Leaping Forward, Driving Solutions""</span>" & _
+             "<br/>The information transmitted (including attachments) is covered by the Electronic Communications Privacy Act, 18 U.S.C. 2510-2521, is intended only for the person(s)" & _
+             " or entity/entities to which it is addressed and may contain confidential and/or privileged material. Any review, retransmission, dissemination or other use of, " & _
+             "or taking of any action in reliance upon, this information by persons or entities other than the intended recipient(s) is prohibited. If you received this in error," & _
+            " please contact the sender and delete the material from any computer.""</p>"
+
+
+            body.Append(String.Format(closing, name, userTitle, email, phone))
+
+            ' Create EmailMeaasge Instance and send Email
+            Dim message As New EmailMessage(addressString, subject.ToString(), body.ToString(), ccString, bccString)
+            message.Send()
+
+
+        Catch ex As Exception
+            Throw New Exception("Email was unable to be sent at this time. Please try resending, or notify the plaza accordingly. Error:" & ex.Message)
+        End Try
+
+    End Sub
+
+    Private Function SetParameters() As Dictionary(Of String, Object) Implements ICase.SetParameters
+        Dim parameters As New Dictionary(Of String, Object)
+        If _createCase Or edit Then
+            parameters.Add("@RegionID", regionID)
+            parameters.Add("@CaseTypeID", caseTypeID)
+
+            If employeeID = String.Empty Then
+                parameters.Add("@EmployeeID", DBNull.Value)
+            Else
+                parameters.Add("@EmployeeID", employeeID)
+            End If
+        End If
+
+        If _completeCase Or edit Then
+            parameters.Add("@CaseNumber", caseNumber)
+            If plazaID <> String.Empty Then
+                parameters.Add("@Plaza", plazaID)
+            Else
+                parameters.Add("@Plaza", DBNull.Value)
+            End If
+
+            If positionID <> String.Empty Then
+                parameters.Add("@Position", positionID)
+            Else
+                parameters.Add("@Position", DBNull.Value)
+            End If
+
+            If reasonID <> String.Empty Then
+                parameters.Add("@Reason", reasonID)
+            Else
+                parameters.Add("@Reason", DBNull.Value)
+            End If
+
+            If notified <> String.Empty Then
+                parameters.Add("@Notified", notified)
+            Else
+                parameters.Add("@Notified", DBNull.Value)
+            End If
+
+            If shiftDate <> String.Empty Then
+                parameters.Add("@ShiftDate", shiftDate)
+            Else
+                parameters.Add("@ShiftDate", DBNull.Value)
+            End If
+
+            If shiftTimeIn <> String.Empty Then
+                parameters.Add("@ShiftTimeIn", shiftTimeIn)
+            Else
+                parameters.Add("@ShiftTimeIn", DBNull.Value)
+            End If
+
+            If shiftTimeOut <> String.Empty Then
+                parameters.Add("@ShiftTimeOut", shiftTimeOut)
+            Else
+                parameters.Add("@ShiftTimeOut", DBNull.Value)
+            End If
+
+            If notes <> String.Empty Then
+                parameters.Add("@Notes", notes)
+            Else
+                parameters.Add("@Notes", DBNull.Value)
+            End If
+        End If
+
+        Return parameters
+    End Function
+
+
+End Class
