@@ -1,0 +1,192 @@
+USE [FSC]
+GO
+/****** Object:  StoredProcedure [dbo].[sp_Retrieve_OVerall_Case_Information]    Script Date: 09/03/2015 18:02:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+-- =============================================
+-- Author:		Tim Hawkins
+-- Create date: 8/25/2014
+-- Description:	Overall Case Inforamtion for Reporting
+-- =============================================
+ALTER PROCEDURE [dbo].[sp_Retrieve_OVerall_Case_Information]
+	-- Add the parameters for the stored procedure here
+	
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+
+SELECT
+---------------------------------Total OpenCases------------------------------
+(SELECT COUNT(CaseNumber) 
+	FROM tbl_Cases  
+	WHERE [Status] = 'Open' 
+	AND (CaseError Is NULL OR CaseError='False')
+	AND (DisregardCase Is NULL OR DisregardCase='False')
+	AND ReasonID IS NOT NULL
+	AND EnteredBy<> 1111
+	AND ((datepart(yy,ShiftDate) = datepart(yy, GetDate())))) 
+ As TotalOpenCases,
+-------------------------- TOtal Open Shift Cases ----------------------------
+(SELECT Count(CaseNumber)
+ FROM tbl_Cases 
+ WHERE [Status] = 'Open' 
+	 and ShiftDate < CONVERT(datetime,CONVERT(varchar,DateADD(day,1, GETDATE()),101)) 
+	 AND(CaseTypeID <=4 Or CaseTypeID = 6 OR CaseTypeID = 7)
+	 AND (CaseError Is NULL OR CaseError='False')
+	 AND (DisregardCase Is NULL OR DisregardCase='False')
+	 AND ReasonID IS NOT NULL
+	 AND EnteredBy<> 1111
+	 AND ((datepart(yy,ShiftDate) = datepart(yy, GetDate())))) 
+ As OverallTotalOpenShiftCases,
+	 
+-------------------------- Overall Percentage of Cases filled ------------------------	 
+	ISNULL((CONVERT(float,(SELECT Count(CaseNumber)
+						   FROM tbl_Cases 
+						   WHERE (CaseTypeID <=4 Or CaseTypeID = 6 OR CaseTypeID = 7)
+						   AND ShiftDate < CONVERT(datetime,CONVERT(varchar,DateADD(day,1, GETDATE()),101)) 
+						   AND ShiftFilledDate IS NOT NULL 
+						   AND [Status] = 'Closed'
+						   AND (CaseError Is NULL OR CaseError='False')
+						   AND (DisregardCase Is NULL OR DisregardCase='False')
+						   AND EnteredBy<> 1111
+						   AND (datepart(yy, ShiftDate) = datepart(yy, GetDate()))
+						   AND ReasonID IS NOT NULL))
+						   /NULLIF((SELECT Count(CaseNumber)
+						            FROM tbl_Cases 
+						            WHERE ShiftDate < CONVERT(datetime,CONVERT(varchar,DateADD(day,1, GETDATE()),101))
+						            AND(CaseTypeID <=4 Or CaseTypeID = 6 OR CaseTypeID = 7)
+						            AND (CaseError Is NULL OR CaseError='False')
+						            AND (DisregardCase Is NULL OR DisregardCase='False')
+						            AND EnteredBy<> 1111
+						            AND (datepart(yy, ShiftDate) = datepart(yy, GetDate()))
+									AND ReasonID IS NOT NULL),0)),0) 
+     As OverallPercentFilled,
+     
+------Current Day Percentage Filled ------------------------------------------------------------------------------------
+	(SELECT Count(CaseNumber)
+	 FROM tbl_Cases 
+	 WHERE [status] = 'Open' 
+	 And  (ShiftDate >=CONVERT(datetime,CONVERT(varchar, GETDATE(),101)) 
+	 AND ShiftDate < CONVERT(datetime,CONVERT(varchar,DateADD(day,1, GETDATE()),101))) 
+	 AND CaseTypeID <=7 
+	 AND EnteredBy<> 1111
+	 AND (CaseError Is NULL OR CaseError='False')
+	 AND ReasonID IS NOT NULL) As CurrentTotalOpenShiftCases,
+	--(SELECT Count(CaseNumber)FROM tbl_Cases WHERE (CaseTypeID <=4 Or CaseTypeID = 6 OR CaseTypeID = 7) AND ShiftDate BETWEEn CONVERT(datetime,CONVERT(varchar, GETDATE(),101)) AND CONVERT(datetime,CONVERT(varchar,DateADD(day,1, GETDATE()),101)) AND
+	--	 ShiftFilledDate IS NOT NULL ANd [Status] = 'Closed') As FilledCases,
+	ISNULL((CONVERT(float,(SELECT Count(CaseNumber)
+	                       FROM tbl_Cases 
+	                       WHERE (CaseTypeID <=4 Or CaseTypeID = 6 OR CaseTypeID = 7) 
+	                       AND (ShiftDate >= CONVERT(datetime,CONVERT(varchar, GETDATE(),101)) 
+	                       AND ShiftDate< CONVERT(datetime,CONVERT(varchar,DateADD(day,1, GETDATE()),101))) 
+	                       AND ShiftFilledDate IS NOT NULL AND [Status] = 'Closed'
+	                       AND (CaseError Is NULL OR CaseError='False')
+	                       AND (DisregardCase Is NULL OR DisregardCase='False')
+	                       AND EnteredBy<> 1111
+	                       AND ReasonID IS NOT NULL))
+	                       /NULLIF((SELECT Count(CaseNumber)
+	                       FROM tbl_Cases 
+	                       WHERE (ShiftDate >= CONVERT(datetime,CONVERT(varchar, GETDATE(),101)) 
+	                       AND ShiftDate< CONVERT(datetime,CONVERT(varchar,DateADD(day,1, GETDATE()),101))) 
+	                       AND(CaseTypeID <=4 Or CaseTypeID = 6 OR CaseTypeID = 7)
+	                       AND (CaseError Is NULL OR CaseError='False')
+	                       AND (DisregardCase Is NULL OR DisregardCase='False')
+	                       AND EnteredBy<> 1111
+						   AND ReasonID IS NOT NULL),0)),0) 
+	As PercentFilled,
+----------Longest Open Case ------------------------------------------------------------------------------------
+	DATEDIFF(d,(SELECT Min(DateEntered) 
+	            FROM tbl_Cases 
+	            WHERE [Status] = 'Open'
+	            AND (CaseError Is NULL OR CaseError='False')
+	            AND (DisregardCase Is NULL OR DisregardCase='False')
+	            AND EnteredBy<> 1111
+	            AND (datepart(yy, ShiftDate) = datepart(yy, GetDate()))
+				AND ReasonID IS NOT NULL), GETDATE()) 
+	As longestDate,
+----------------------- Error Rate ---------------------------------------------------------------------------
+	(iSNULL(CONVERT(float,(SELECT COUNT(CaseNumber) 
+	  FROM tbl_Cases 
+	  WHERE (CaseError = 1
+		OR (ReasonID IS NULL AND (CaseError IS NULL OR CaseError = 0))
+		OR (ShiftTimeIn = ShiftTimeOut AND (CaseError IS NULL OR CaseError = 0))
+		OR (((ShiftDate IS NOT NULL AND datePart(yy, ShiftDate) <> datepart(yy, DateEntered)) AND(CaseError IS NULL OR CaseError = 0)))
+		OR ((ShiftDate IS NOT NULL AND datePart(yy, ShiftDate) = '1900') AND (CaseError IS NULL OR CaseError = 0))
+		OR ((ShiftTimeIn IS NOT NULL AND datePart(yy, ShiftTimeIn) = '1900') AND (CaseError IS NULL OR CaseError = 0))
+		OR ((ShiftTimeOut IS NOT NULL AND datePart(yy, ShiftTimeOut) = '1900') AND (CaseError IS NULL OR CaseError = 0))
+		OR(CONVERT(datetime,Convert(varchar, ShiftDate,101)) < CONVERT(datetime,Convert(varchar, DateEntered,101)) AND (CaseError IS NULL OR CaseError = 0))
+		OR (SHiftTImeOut < ShiftTimeIn AND (CaseError IS NULL OR CaseError = 0))
+		)
+		AND EnteredBy<> 1111
+		AND(datepart(yy, DateEntered) = datepart(yy, GetDate()))
+	  ) + (CONVERT(float,(SELECT COUNT(c.DateEntered) 
+						   FROM tbl_Case_Changes cc
+						   Right Join tbl_Cases c On  cc.CaseNumber = c.CaseNumber
+						   WHERE (datepart(yy, cc.ChangeDate) = datepart(yy, GetDate()))
+						   AND cc.ChangeType <> 9
+						   AND cc.CHangeType <> 10
+						   and cc.ChangeType <> 11 
+				          )
+				    )
+		    )
+      + (CONVERT(float,(SELECT COUNT(f.DateEntered) 
+						   FROM tbl_FollowUp_Changes fc
+						   JOIN tbl_FollowUps f  ON fc.CasenUmber = f.CaseNumber AND fc.FollowUpID = f.FollowUpID
+						   WHERE (datepart(yy, fc.ChangeDate) = datepart(yy, GetDate()))
+						   AND fc.ChangeType <> 9
+						   AND fc.CHangeType <> 10
+						   and fc.ChangeType <> 11 
+				          )
+				    )
+		    )
+	  
+	  + CONVERT(float, 
+		(SELECT COUNT(f.FollowUPID)
+		FROM tbl_followUps f
+		JOIN tbl_Cases c on f.CaseNumber = c.CaseNumber
+		WHERE(datepart(yy, f.DateEntered) = datepart(yy, GetDate()))
+	         AND f.EnteredBy<> 1111
+	         AND (
+			(f.ShiftDate <> c.ShiftDate AND(f.CaseError IS NULL or f.CaseError = 0))
+		  OR (f.ShiftTimeIn < c.ShiftTimeIn AND F.ShiftDate = c.ShiftDate AND (f.CaseError IS NULL or f.CaseError = 0))
+		  OR (f.ShiftTimeOut > c.ShiftTimeOut AND f.ShiftTimeIn < CONVERT(datetime,CONVERT(varchar,DateADD(hh,12,c.ShiftTimeIn), 100)) 
+			  AND f.ShiftDate = c.ShiftDate AND (f.CaseError IS NULL or f.CaseError = 0))
+		  OR (f.ShiftTimeIn = f.ShiftTimeOut AND(f.CaseError IS NULL or f.CaseError = 0))
+		  OR (f.ShiftTimeIn IS NOT NULL 
+		        AND ((datepart(mm, f.ShiftTimeIn) <> datepart(mm, c.ShiftTimeIn)
+		               OR (datepart(dd, f.ShiftTimeIn) <> datepart(dd, c.ShiftTimeIn))))
+		       AND f.ShiftTimeIn > c.ShiftTimeIn AND (f.CaseError IS NULL or f.CaseError = 0))
+		  OR (f.ShiftTimeOut IS NOT NULL 
+		        AND ((datepart(mm, f.ShiftTimeOut) <> datepart(mm, c.ShiftTimeOut)
+		               OR (datepart(dd, f.ShiftTimeOut) <> datepart(dd, c.ShiftTimeOut))))
+		       AND f.ShiftTimeOut < c.ShiftTimeOut ANd (f.CaseError IS NULL or f.CaseError = 0))
+		  OR f.CaseError = 1
+		  OR (f.ReasonID IS NULL And (f.CaseError IS NULL or f.CaseError = 0))
+		  OR (f.ShiftTimeIn >=CONVERT(datetime,CONVERT(varchar,DateADD(hh,12,c.ShiftTimeIn), 100)) 
+				AND (f.CaseError IS NULL or f.CaseError = 0)) 
+		  OR (f.ShiftTimeOut >=CONVERT(datetime,CONVERT(varchar,DateADD(hh,12,c.ShiftTimeOut), 100)) 
+				AND (f.CaseError IS NULL or f.CaseError = 0))
+		  OR ( f.ShiftTimeOut > c.ShiftTimeOut AND f.ShiftTimeOut < CONVERT(datetime,CONVERT(varchar,DateADD(hh,12,c.ShiftTimeOut), 100))
+		       AND (f.CaseError IS NULL or f.CaseError = 0))
+		  OR (f.ShiftDate IS NOt NULL AND datepart(yy, f.ShiftDate) < datepart(yy, f.DateEntered)
+		       AND (f.CaseError IS NULL or f.CaseError = 0))
+		  OR((f.ShiftDate IS NOT NULL AND datepart(yy, f.ShiftDate)  ='1900')
+				AND (f.CaseError IS NULL or f.CaseError = 0))
+	      OR((f.ShiftTimeOUt IS NOT NULL AND datepart(yy, f.ShiftTimeOUt)  ='1900') 
+				AND (f.CaseError IS NULL or f.CaseError = 0))
+		  OR( (f.ShiftTimeIn IS NOT NULL AND datepart(yy, f.ShiftTimeIn)  ='1900') 
+				AND (f.CaseError IS NULL or f.CaseError = 0))
+		  )))
+		 
+	  )/NULLIF((SELECT COUNT(CaseNumber) 
+				FROM tbl_Cases WHERE EnteredBy<> 1111 AND (datepart(yy, DateEntered) = datepart(yy, GetDate()))) + (SELECT COUNT(FollowUpID) 
+				FROM tbl_FollowUps WHERE ENteredBy <>1111 AND (datepart(yy, DateEntered) = datepart(yy, GetDate()))) ,0),0)) As Errors
+	
+
+END
