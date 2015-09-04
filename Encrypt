@@ -1,0 +1,115 @@
+Imports System.Web.Services
+Imports System.Data.SqlClient
+Imports System.Security
+Imports System.Security.Cryptography
+Imports System.IO
+Public Class EncryptString
+
+
+    Private Key() As Byte
+    Private IV() As Byte
+    Private aes As AesCryptoServiceProvider
+    Public Sub New()
+        aes = New AesCryptoServiceProvider()
+    End Sub
+
+    Public Function getKey()
+        Return Key
+    End Function
+
+    Public Function getIV()
+        Return IV
+    End Function
+
+    Public Function Encrpyt(ByVal plaintext As String) As String
+        Dim encryptedString As String = Nothing
+        Dim EKey = "xxxxxxxxxxxxxxx"
+        Dim salt As String = "xxxxxxxx"
+        Try
+            'Generate KEY & IV
+
+          
+            Dim rfc As New Rfc2898DeriveBytes(EKey, Encoding.Unicode.GetBytes(salt))
+
+            Key = rfc.GetBytes(32)
+            IV = rfc.GetBytes(16)
+
+           
+
+            'Enbcrypt the password String to an array of Bytes
+            If plaintext IsNot Nothing And plaintext.Length <= 0 Then
+                Throw New ArgumentNullException("Text")
+            End If
+
+            If Key IsNot Nothing And Key.Length <= 0 Then
+                Throw New ArgumentNullException("Key")
+            End If
+
+            If IV IsNot Nothing And IV.Length <= 0 Then
+                Throw New ArgumentNullException("IV")
+            End If
+
+            Dim encryptor As ICryptoTransform = aes.CreateEncryptor(Key, IV)
+
+            'Create the Streams used for encryption
+            Using msEncrypt As New MemoryStream()
+                Using csEncrypt As New CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write)
+                    Using swEncrypt As New StreamWriter(csEncrypt)
+                        'Write all the date to stream
+                        swEncrypt.Write(plaintext)
+                    End Using
+                    encryptedString = Convert.ToBase64String(msEncrypt.ToArray())
+
+                End Using
+            End Using
+
+        Catch ex As Exception
+        End Try
+        Return encryptedString
+    End Function
+
+    Public Function Decrypt(cipherText As String)
+        Dim plainText As String = Nothing
+        Dim EKey = "xxxxxxxxxxxxxxx"
+        Dim salt As String = "xxxxxxxx"
+        Try
+
+            'Generate KEY & IV
+            Dim rfc As New Rfc2898DeriveBytes(EKey, Encoding.Unicode.GetBytes(salt))
+
+            Key = rfc.GetBytes(32)
+            IV = rfc.GetBytes(16)
+
+            
+
+            'Enbcrypt the password String to an array of Bytes
+            If cipherText IsNot Nothing And cipherText.Length <= 0 Then
+                Throw New ArgumentNullException("New Password")
+            End If
+
+            If Key IsNot Nothing And Key.Length <= 0 Then
+                Throw New ArgumentNullException("Key")
+            End If
+
+            If IV IsNot Nothing And IV.Length <= 0 Then
+                Throw New ArgumentNullException("IV")
+            End If
+
+            Dim decryptor As ICryptoTransform = aes.CreateDecryptor(Key, IV)
+            Dim cipher() As Byte = Convert.FromBase64String(cipherText)
+
+            Using msDecrypt As New MemoryStream(cipher)
+                Using csDecrypt As New CryptoStream(msDecrypt, decryptor, CryptoStreamMode.Read)
+                    Using srDecrypt As New StreamReader(csDecrypt)
+                        plainText = srDecrypt.ReadToEnd()
+                    End Using
+                End Using
+            End Using
+
+
+        Catch ex As Exception
+            Throw
+        End Try
+        Return plainText
+    End Function
+End Class
