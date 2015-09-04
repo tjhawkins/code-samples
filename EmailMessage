@@ -1,0 +1,86 @@
+Imports System.Net.Mail
+Public Class EmailMessage
+    Private addesses As String = String.Empty
+    Private ccAddresses As String = String.Empty
+    Private bcAddresses As String = String.Empty
+    Private subject As String = String.Empty
+    Private body As String = String.Empty
+
+    Public Sub New(ByVal _addresses As String, ByVal _subject As String, ByVal _body As String, Optional ByVal _ccAddresses As String = "", Optional ByVal _bcAddresses As String = "")
+        addesses = _addresses
+        subject = _subject
+        body = _body
+        ccAddresses = _ccAddresses
+        bcAddresses = _bcAddresses
+    End Sub
+
+    Public Sub Send()
+        '' Create message
+        Dim message As New MailMessage()
+        message.From = New MailAddress("Schedules@faneuil.com", "Faneuil Service Center")
+
+#If DEBUG Then
+        message.To.Add("timothy.hawkins@faneuil.com")
+#Else
+ ' Add message recipients
+        If addesses.IndexOf(";") > -1 Then
+            Dim addressList() As String = addesses.Split(";")
+            For Each address As String In addressList
+                Try
+                    message.To.Add(address)
+                Catch ex As Exception
+                End Try
+
+            Next
+        Else
+            message.To.Add(addesses)
+        End If
+
+
+        If ccAddresses.IndexOf(";") > -1 Then
+            Dim cc() As String = ccAddresses.Split(";")
+            For Each address As String In cc
+                Try
+                    message.CC.Add(address)
+                Catch ex As Exception
+                End Try
+
+            Next
+        Else
+            If ccAddresses <> String.Empty Then
+                message.CC.Add(ccAddresses)
+            End If
+        End If
+
+        If bcAddresses <> String.Empty Then
+            Dim bcc() As String = bcAddresses.Split(";")
+            For Each address As String In bcc
+                Try
+                    message.Bcc.Add(address)
+                Catch ex As Exception
+                End Try
+
+            Next
+        End If
+
+        message.Bcc.Add("timothy.hawkins@faneuil.com")
+#End If
+
+       '' Add Subject And body
+        message.Subject = subject
+
+        message.IsBodyHtml = True
+        message.Body = body
+
+        '' send email
+        Dim emailClient As New SmtpClient("smtp.office365.com", 587)
+        emailClient.UseDefaultCredentials = False
+        emailClient.EnableSsl = True
+        emailClient.Credentials = New System.Net.NetworkCredential("Schedules@faneuil.com", "Faneuil1")
+        emailClient.DeliveryMethod = SmtpDeliveryMethod.Network
+
+        emailClient.Send(message)
+    End Sub
+
+
+End Class
