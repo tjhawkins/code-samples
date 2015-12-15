@@ -22,6 +22,7 @@ Public Class FollowUp
     Private edit As Boolean = False
     Private _createCase As Boolean = False
     Private _completeCase As Boolean = False
+    Private send As Boolean = False
 
     Public Sub New()
 
@@ -165,6 +166,12 @@ Public Class FollowUp
             caseError = value
         End Set
     End Property
+
+    Public WriteOnly Property Send_Template() As String
+        Set(value As String)
+            send = value
+        End Set
+    End Property
     Public Sub CaseChange(ByVal change As String, ByVal changeType As Integer) Implements ICase.CaseChange
         Try
             Dim parameters As New Dictionary(Of String, Object)
@@ -183,6 +190,7 @@ Public Class FollowUp
         Dim parameters As Dictionary(Of String, Object) = SetParameters()
         MyBase.ExecuteNonQuery("sp_Update_Additional_FollowUp_Information", parameters)
 
+        '' Prevent Calling Email Template Twice
         If reasonID <> String.Empty Then
             If ((Integer.Parse(reasonID) >= 27 And Integer.Parse(reasonID) <= 31) Or Integer.Parse(reasonID) = 93) And edit <> True Then
                 EmailTemplate()
@@ -218,7 +226,7 @@ Public Class FollowUp
     Public Sub EmailTemplate() Implements ICase.EmailTemplate
         '' if Case is for Shift Coverage and Reason is for Accpeted Shift Or Reason is disregard for edited cases
         If reasonID <> String.Empty Then
-            If Integer.Parse(caseTypeID) = 5 And ((Integer.Parse(reasonID) >= 27 And Integer.Parse(reasonID) <= 31) Or Integer.Parse(reasonID) = 86 _
+            If Integer.Parse(caseTypeID) = 5 And ((Integer.Parse(reasonID) >= 27 And Integer.Parse(reasonID) <= 31) Or (Integer.Parse(reasonID) = 86 And send = True) _
                                                   Or Integer.Parse(reasonID) = 93) And caseError = False Then
                 SendTemplate()
             End If
@@ -289,7 +297,7 @@ Public Class FollowUp
             Dim addresstable As New DataTable()
             Dim parameters As New Dictionary(Of String, Object)
             parameters.Add("@CaseNumber", caseNumber)
-            addresstable = MyBase.getData("sp_Get_FollowUp_Email_Addresses", parameters)
+            addresstable = MyBase.getData("sp_Get_FollowUp_Email_Addresses_X", parameters)
 
             For Each column As DataColumn In addresstable.Columns
                 If Not IsDBNull(addresstable.Rows(0).Item(column.ColumnName)) Then
