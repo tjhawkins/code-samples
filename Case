@@ -6,6 +6,8 @@ Public Class _Case
 
 
     Private caseNumber As String = String.Empty
+    Private clientID As String = String.Empty
+    Private client As String = String.Empty
     Private regionID As String = String.Empty
     Private region As String = String.Empty
     Private plazaID As String = String.Empty
@@ -46,7 +48,8 @@ Public Class _Case
         caseNumber = Case_Number
     End Sub
 
-    Public Sub New(ByVal region As String, ByVal caseType As String, ByVal user_ID As String, Optional ByVal employee_ID As String = "")
+    Public Sub New(ByVal client As String, ByVal region As String, ByVal caseType As String, ByVal user_ID As String, Optional ByVal employee_ID As String = "")
+        clientID = client
         regionID = region
         caseTypeID = caseType
         userID = user_ID
@@ -77,6 +80,22 @@ Public Class _Case
         End Get
         Set(value As String)
             region = value
+        End Set
+    End Property
+    Public Property Client_ID() As String
+        Get
+            Return clientID
+        End Get
+        Set(value As String)
+            clientID = value
+        End Set
+    End Property
+    Public Property Client_() As String
+        Get
+            Return client
+        End Get
+        Set(value As String)
+            client = value
         End Set
     End Property
     Public Property Plaza_ID() As String
@@ -262,7 +281,7 @@ Public Class _Case
 
         parameters.Add("@CaseNumber", caseNumber)
 
-        MyBase.ExecuteNonQuery("sp_Assign_Case", parameters)
+        ExecuteNonQuery("sp_Assign_Case", parameters)
     End Sub
     Public Sub CaseChange(ByVal change As String, ByVal changeType As Integer) Implements ICase.CaseChange
 
@@ -271,7 +290,7 @@ Public Class _Case
         parameters.Add("@CaseNumber", caseNumber)
         parameters.Add("@ChangeType", changeType)
         parameters.Add("@ChangesMade", change)
-        MyBase.ExecuteNonQuery("sp_Add_Case_Changes", parameters)
+        ExecuteNonQuery("sp_Add_Case_Changes", parameters)
     End Sub
 
     Public Function CaseSearch() As DataTable
@@ -280,6 +299,12 @@ Public Class _Case
             parameters.Add("@CaseNumber", caseNumber)
         Else
             parameters.Add("@CaseNumber", DBNull.Value)
+        End If
+
+        If client <> String.Empty Then
+            parameters.Add("@ClientID", clientID)
+        Else
+            parameters.Add("@ClientID", DBNull.Value)
         End If
 
         If regionID <> String.Empty Then
@@ -325,7 +350,7 @@ Public Class _Case
             parameters.Add("@EmployeeID", DBNull.Value)
         End If
 
-        Return MyBase.getData("sp_CaseSearch", parameters)
+        Return getData("sp_CaseSearch_X", parameters)
 
     End Function
 
@@ -334,7 +359,7 @@ Public Class _Case
         parameters.Add("@UpdatedBy", userID)
         parameters.Add("@CaseNumber", caseNumber)
 
-        MyBase.ExecuteNonQuery("sp_Close_Case", parameters)
+        ExecuteNonQuery("sp_Close_Case", parameters)
     End Sub
 
     Public Sub COmpleteCase() Implements ICase.CompleteCase
@@ -355,8 +380,9 @@ Public Class _Case
     Public Sub CreateCase() Implements ICase.CreateCase
         _createCase = True
         Dim parameters As Dictionary(Of String, Object) = SetParameters()
+        parameters.Add("@ClientID", clientID)
         parameters.Add("@EnteredBy", userID)
-        caseNumber = MyBase.setData("sp_Create_New_Case_New", parameters).ToString()
+        caseNumber = setData("sp_Create_New_Case_X", parameters).ToString()
     End Sub
 
     Public Sub EditCase() Implements ICase.EditCase
@@ -365,7 +391,7 @@ Public Class _Case
         parameters.Add("@UpdatedBy", userID)
         parameters.Add("@CaseError", caseError)
         parameters.Add("@Status", status)
-        MyBase.ExecuteNonQuery("sp_Edit_Case_New", parameters)
+        ExecuteNonQuery("sp_Edit_Case_New", parameters)
 
         If _emailCase = True Then
             '' After editing, if case is disregarded change reason for template
@@ -400,21 +426,47 @@ Public Class _Case
         parameters.Add("@CaseNumber", caseNumber)
         parameters.Add("UserID", userID)
 
-        MyBase.ExecuteNonQuery("sp_Exit_Case", parameters)
+        ExecuteNonQuery("sp_Exit_Case", parameters)
     End Sub
+
+    Public Function GetAgentCases() As DataTable
+        Dim parameters As New Dictionary(Of String, Object)
+        parameters.Add("@UserID", userID)
+
+        Return getData("sp_Retrieve_Open_User_Cases", parameters)
+    End Function
 
     Public Function GetCaseInformation() As DataTable Implements ICase.GetCaseInformation
         Dim parameters As New Dictionary(Of String, Object)
         parameters.Add("@CaseNumber", caseNumber)
 
-        Return MyBase.getData("sp_Retrieve_Case_Information", parameters)
+        Return getData("sp_Retrieve_Case_Information_X", parameters)
     End Function
+
     Public Function GetCaseFollowUps() As DataTable
         Dim parameters As New Dictionary(Of String, Object)
         parameters.Add("@CaseNumber", caseNumber)
 
-        Return MyBase.getData("sp_Retrieve_Case_FollowUp_Information", parameters)
+        Return getData("sp_Retrieve_Case_FollowUp_Information", parameters)
     End Function
+
+    Public Function GetCoveredCases(ByVal beginDate As String, ByVal endDate As String) As DataTable
+        Dim parameters As New Dictionary(Of String, Object)
+        parameters.Add("@AgentID", userID)
+        parameters.Add("@StartDate", beginDate)
+        parameters.Add("@EndDate", endDate)
+
+        Return getData("sp_Retrieve_Agent_Covered_Cases", parameters)
+    End Function
+
+    Public Function GetVacationCases() As DataTable
+        Dim parameters As New Dictionary(Of String, Object)
+        parameters.Add("@RegionID", regionID)
+      
+
+        Return getData("sp_Retrieve_Open_Vacation_Cases", parameters)
+    End Function
+
     Public Sub ResendTemplate() Implements ICase.ResendTemplate
         RetrieveIDInformation()
         SendTemplate()
@@ -424,12 +476,15 @@ Public Class _Case
         Dim parameters As New Dictionary(Of String, Object)
         parameters.Add("@Region", regionID)
         parameters.Add("@Plaza", plazaID)
-        Return MyBase.getData("sp_Get_Email_Addresses", parameters)
-
-
+        Return getData("sp_Get_Email_Addresses", parameters)
     End Function
 
     Private Sub RetrieveIDInformation()
+        '' Get Client ID
+        Dim __client As New _Clients()
+        __client.Client_Name = client
+        clientID = __client.GetClientID()
+
         '' Determine region id
         Dim __region As New Region()
         __region.Region_Name = region
@@ -438,6 +493,7 @@ Public Class _Case
         ''Determine plaza id
         Dim __plaza As New Plaza()
         __plaza.Region_ID = regionID
+        __plaza.Client_ID = clientID
         __plaza.Plaza_Name = plaza
         plazaID = __plaza.GetPlazaID
 
@@ -496,8 +552,11 @@ Public Class _Case
                 If Integer.Parse(regionID) <> 2 Then
                     '' Get Template Addresses for the specifed plaza
                     Dim parameters As New Dictionary(Of String, Object)
+
+                    '' Let off reconfiguring Vaction specialist with client
                     parameters.Add("@Region", regionID)
-                    addressTable = MyBase.getData("sp_Retrieve_Region_Vacation_Specialist_Email", parameters)
+                    parameters.Add("@Client", clientID)
+                    addressTable = MyBase.getData("sp_Retrieve_Region_Vacation_Specialist_Email_X", parameters)
 
                     If Not IsDBNull(addressTable.Rows(0).Item(0)) Then
                         addressString = addressTable.Rows(0).Item(0)
@@ -507,13 +566,14 @@ Public Class _Case
                 End If
                 ccString = "Christopher.White@faneuil.com;Thedy.Mitchell@faneuil.com;Demond.Gibson@faneuil.com;Donna.Frazier@faneuil.com"
 
-                '' Create Templ
+                '' Create Template
             Else
                 '' Get Template Addresses for the specifed plaza
                 Dim parameters As New Dictionary(Of String, Object)
                 parameters.Add("@Region", regionID)
+                parameters.Add("@Client", clientID)
                 parameters.Add("@Plaza", plazaID)
-                addressTable = MyBase.getData("sp_Get_Email_Addresses", parameters)
+                addressTable = MyBase.getData("sp_Get_Email_Addresses_X", parameters)
 
                 For Each column As DataColumn In addressTable.Columns
                     If Not IsDBNull(addressTable.Rows(0).Item(column.ColumnName)) Then
@@ -528,6 +588,7 @@ Public Class _Case
                     End If
                 Next
             End If
+
 
             If ccString.IndexOf(email) = -1 And addressString.IndexOf(email) = -1 Then
                 If ccString <> String.Empty Then
@@ -639,7 +700,7 @@ Public Class _Case
 
             If Integer.Parse(caseTypeID) <> 8 Then
 
-                body.Append("<tr style=""background-color:#D7E4BC;""><td style=""padding:5px;"">Date od Opening:<td style=""padding:5px;"">")
+                body.Append("<tr style=""background-color:#D7E4BC;""><td style=""padding:5px;"">Date of Opening:<td style=""padding:5px;"">")
                 body.Append(openingDate)
                 body.Append("</td></tr>")
 
@@ -686,6 +747,7 @@ Public Class _Case
                 body.Append("<th>MI</th><th style=""text-align:left;padding-left: 5px;"">Result</th>")
                 body.Append("<th style=""text-align:left;padding-left: 5px;"">Shift/Time In</th>")
                 body.Append("<th style=""text-align:left;padding-left: 5px;"">Shift/Time Out</th>")
+                body.Append("<th style=""text-align:left;padding-left: 5px;"">Notes</th>")
                 body.Append("</tr>")
 
                 Dim j As Integer = 0
@@ -698,6 +760,7 @@ Public Class _Case
                     Dim mi As String = String.Empty
                     Dim shiftIn As String = String.Empty
                     Dim shiftOut As String = String.Empty
+                    Dim followUpNotes As String = String.Empty
 
                     If IsDBNull(row.Item(3)) Then
                         lName = "N/A"
@@ -739,21 +802,26 @@ Public Class _Case
                         End If
 
                     End If
+                    If IsDBNull(row.Item(13)) Then
+                        followUpNotes = "N/A"
+                    Else
+                        followUpNotes = row.Item(13)
+                    End If
 
                     Dim tableROw As String = String.Empty
                     If j Mod 2 = 0 Then
                         tableROw = "<tr style=""background-color:#ddd""><td style=""padding-left: 5px;"">{0}</td><td style=""padding-left: 5px;"">{1}</td><td style=""padding-left:" & _
                         "5px;"">{2}</td><td style=""padding-left: 5px;"">{3}</td><td style=""text-align:center;"">{4}" & _
                         " </td><td style=""padding-left: 5px;"">{5}</td><td style=""padding-left: 5px;"">{6}</td><td style=""padding-left: 5px;"">" & _
-                        "{7}</td></tr>"
+                        "{7}</td><td style=""padding-left: 5px;"">{8}</td></tr>"
                     Else
                         tableROw = "<tr><td style=""padding-left: 5px;"">{0}</td><td style=""padding-left: 5px;"">{1}</td><td style=""padding-left:" & _
                         "5px;"">{2}</td><td style=""padding-left: 5px;"">{3}</td><td style=""text-align:center;"">{4}" & _
                         " </td><td style=""padding-left: 5px;"">{5}</td><td style=""padding-left: 5px;"">{6}</td><td style=""padding-left: 5px;"">" & _
-                        "{7}</td></tr>"
+                        "{7}</td><td style=""padding-left: 5px;"">{8}</td></tr>"
                     End If
 
-                    body.Append(String.Format(tableROw, enterDate, csr, lName, fName, mi, result, shiftIn, shiftOut))
+                    body.Append(String.Format(tableROw, enterDate, csr, lName, fName, mi, result, shiftIn, shiftOut, followUpNotes))
                     j = j + 1
                 Next
                 body.Append("</table>")
