@@ -27,7 +27,12 @@ Public Class CreateNewCase
                         Dim region As String = Session("Region")
                         Dim caseType As String = Session("CaseType")
                         Dim caseTypeID As Integer = Session("CaseTypeID")
-                        Dim regionID As Integer = Nothing
+                        Dim clientName As String = Session("ClientName")
+
+
+                        Dim clientID As String = Nothing
+                        Dim regionID As String = Nothing
+
 
 
                         If eid <> String.Empty Then
@@ -46,13 +51,16 @@ Public Class CreateNewCase
                         End If
                         
 
-                    
+                        '' Get CLient And Region ID
+                        Dim __client As New _Clients()
+                        __client.Client_Name = clientName
+                        clientID = __client.GetClientID()
 
                         Dim _region As New Region()
                         _region.Region_Name = region
                         regionID = _region.GetRegionID()
 
-                        CreateNewCase(TypeOfCase.Value, caseType, caseTypeID, regionID, region, eid, n)
+                        CreateNewCase(TypeOfCase.Value, caseType, caseTypeID, regionID, region, eid, n, clientID, clientName)
 
                         searchFieldsetWrapper.CssClass = "four column fieldWrapper search hide"
                         resultsWrapper.CssClass = "seven column search hide"
@@ -90,15 +98,22 @@ Public Class CreateNewCase
 
     End Sub
     Private Sub PopulateCaseSearch()
-        Dim regions As New Region()
-        region.AppendDataBoundItems = True
-        region.Items.Insert(0, New ListItem("Please select a region", ""))
-        region.AppendDataBoundItems = True
-        region.DataSource = regions.GetActiveRegions()
-        region.DataTextField = "RegionName"
-        region.DataValueField = "RegionID"
-        region.DataBind()
 
+        Dim id As FormsIdentity = DirectCast(HttpContext.Current.User.Identity, FormsIdentity)
+        Dim ticket As FormsAuthenticationTicket = id.Ticket
+        Dim userData() As String = ticket.UserData.Split(",")
+
+        Dim _client As New _Clients()
+        client.AppendDataBoundItems = True
+        client.Items.Insert(0, New ListItem("Please select a client", ""))
+        client.DataSource = _client.GetCLients(userData(6))
+        client.DataTextField = "ClientName"
+        client.DataValueField = "ClientID"
+        client.DataBind()
+
+        region.Items.Insert(0, New ListItem("Please select a client", ""))
+
+     
         Dim caseTypes As New CaseType()
         caseType.AppendDataBoundItems = True
         caseType.Items.Insert(0, New ListItem("Please select a case type", ""))
@@ -111,6 +126,7 @@ Public Class CreateNewCase
     Protected Sub newCaseSearchBtn_Click(sender As Object, e As EventArgs) Handles newCaseSearchBtn.Click
 
         Try
+
             If Page.IsValid Then
                 Dim emp As New Employee()
 
@@ -134,7 +150,7 @@ Public Class CreateNewCase
                 End Select
 
 
-                Dim employeeTable As DataTable = emp.EmployeeSearch(region.SelectedValue, newCaseSearchOptions.SelectedValue, parameterOne, parameterTwo)
+                Dim employeeTable As DataTable = emp.EmployeeSearch(client.SelectedValue, region.SelectedValue, newCaseSearchOptions.SelectedValue, parameterOne, parameterTwo)
 
                 If employeeTable.Rows.Count > 0 Then
                     If searchResultsMessage.Text <> String.Empty Then
@@ -183,11 +199,12 @@ Public Class CreateNewCase
 
     End Sub
     Private Sub CreateNewCase(ByVal type As String, ByVal caseTypeValue As String, ByVal caseTypeID As String, ByVal regionID As String, ByVal regionValue As String, _
-                              ByVal eidValue As String, ByVal name As String)
+                              ByVal eidValue As String, ByVal name As String, ByVal clientID As String, ByVal clientName As String)
 
         Try
             cTypeText.Text = caseTypeValue
             caseRegion.Text = regionValue
+            caseClient.Text = clientName
 
             ''Set form to retrieve additional information
             If type = "Employee" Then
@@ -205,7 +222,7 @@ Public Class CreateNewCase
                         position.Items.Clear()
                     End If
 
-                    PopulatePositions(regionID)
+                    PopulatePositions(clientID)
 
                     '' Populate Plaza Drop Down if Case Type is Not Request for work or Vacation
                     If Integer.Parse(caseTypeID) <> 10 And Integer.Parse(caseTypeID) <> 8 Then
@@ -213,7 +230,7 @@ Public Class CreateNewCase
                             plaza.Items.Clear()
                         End If
 
-                        PopulatePlazas(regionID, eidValue, name)
+                        PopulatePlazas(regionID, eidValue, clientID)
                     Else
                         plaza.Items.Insert(0, New ListItem("N/A", "0"))
                         plaza.Enabled = False
@@ -269,7 +286,7 @@ Public Class CreateNewCase
                         positionWrapper.Visible = False
                     End If
 
-                    PopulatePositions(regionID)
+                    PopulatePositions(clientID)
 
                     If shiftWrapper.Visible = False Then
                         shiftWrapper.Visible = True
@@ -295,7 +312,7 @@ Public Class CreateNewCase
                     plaza.Items.Clear()
                 End If
 
-                PopulatePlazas(regionID, eidValue, name)
+                PopulatePlazas(regionID, eidValue, clientID)
 
             ElseIf type = "Other" Then
                 empInfoWrapper.Visible = False
@@ -328,7 +345,7 @@ Public Class CreateNewCase
             '' Create New Case 
             '' 
             Dim userID As String = User.Identity.Name
-            Dim newCase As New _Case(regionID, caseTypeID, userID, eidValue)
+            Dim newCase As New _Case(clientID, regionID, caseTypeID, userID, eidValue)
             newCase.CreateCase()
 
 
@@ -346,6 +363,7 @@ Public Class CreateNewCase
 
             caseCookie.Values("CaseNumber") = caseNum
             caseCookie.Values("RegionID") = regionID
+            caseCookie.Values("ClientID") = clientID
             caseCookie.Values("CaseTypeID") = caseTypeID
             caseDate.Text = Format(Date.Now, "MMMM dd, yyyy HH:mm:ss tt")
             caseCookie.Values("CaseDate") = caseDate.Text
@@ -364,30 +382,30 @@ Public Class CreateNewCase
             End If
             caseNumber.Text = CaseNumText & caseNum
             caseNumberField.Value = CaseNumText & caseNum
-           
+
 
         Catch ex As Exception
             Throw New Exception("An internal error has occurred: " & ex.Message)
         End Try
     End Sub
-    Private Sub PopulatePositions(ByVal RegionID As String)
+    Private Sub PopulatePositions(ByVal clientID As String)
         Dim positions As New Position()
-        Dim table As New DataTable
+        'Dim table As New DataTable
 
-        If Integer.Parse(regionID) = 7 Then
-            table = positions.GetPositionByRegion(regionID)
-        Else
-            table = positions.GetPositionByRegion(DBNull.Value)
-        End If
+        'If Integer.Parse(RegionID) = 7 Then
+        '    table = positions.GetPositionByRegion(RegionID)
+        'Else
+        '    table = positions.GetPositionByRegion(DBNull.Value)
+        'End If
         position.Items.Insert(0, New ListItem("Please select a position", ""))
         position.AppendDataBoundItems = True
-        position.DataSource = table
+        position.DataSource = positions.GetPositionByClient(clientID)
         position.DataTextField = "Position"
         position.DataValueField = "PositionID"
         position.DataBind()
     End Sub
-    Private Sub PopulatePlazas(ByVal RegionID As String, ByVal eidValue As String, ByVal name As String)
-        Dim plazas As New Plaza(RegionID)
+    Private Sub PopulatePlazas(ByVal RegionID As String, ByVal eidValue As String, ByVal clientID As String)
+        Dim plazas As New Plaza(RegionID, clientID)
 
         plaza.Items.Insert(0, New ListItem("Please select a plaza", ""))
         plaza.AppendDataBoundItems = True
@@ -423,7 +441,7 @@ Public Class CreateNewCase
     End Sub
 
     Protected Sub newCaseNextBtn_Click(sender As Object, e As EventArgs) Handles newCaseNextBtn.Click
-        CreateNewCase(TypeOfCase.Value, caseType.SelectedItem.Text, caseType.SelectedValue, region.SelectedValue, region.SelectedItem.Text, employeeID.Value, Nothing)
+        CreateNewCase(TypeOfCase.Value, caseType.SelectedItem.Text, caseType.SelectedValue, region.SelectedValue, region.SelectedItem.Text, employeeID.Value, Nothing, client.SelectedValue, client.SelectedItem.Text)
     End Sub
 
     Protected Sub caseSubmitBtn_Click(sender As Object, e As EventArgs) Handles caseSubmitBtn.Click
@@ -441,6 +459,7 @@ Public Class CreateNewCase
                     _newCase.Case_Number = caseCookie("CaseNumber")
 
                     _newCase.Region_ID = caseCookie("RegionID")
+                    _newCase.Client_ID = caseCookie("ClientID")
                     _newCase.Employee_ID = caseCookie("EID")
                     _newCase.Case_TypeID = caseCookie("CaseTypeID")
                     'caseTypeID = caseCookie("CaseTypeID")
@@ -614,6 +633,27 @@ Public Class CreateNewCase
     Protected Sub newCaseBackBtn_Click(sender As Object, e As EventArgs) Handles newCaseBackBtn.Click
         Response.Redirect("default.aspx", False)
     End Sub
+    Protected Sub client_SelectedIndexChanged(sender As Object, e As EventArgs) Handles client.SelectedIndexChanged
+        Try
 
+            region.Items.Clear()
+
+
+            If client.SelectedValue <> String.Empty Then
+                Dim _region As New Region()
+                region.AppendDataBoundItems = True
+                region.Items.Insert(0, New ListItem("Please select a region", ""))
+                region.DataSource = _region.GetClientRegions(client.SelectedValue)
+                region.DataTextField = "RegionName"
+                region.DataValueField = "RegionID"
+                region.DataBind()
+            Else
+                region.Items.Insert(0, New ListItem("Select a client", ""))
+            End If
+        Catch ex As Exception
+        End Try
+
+
+    End Sub
    
 End Class
