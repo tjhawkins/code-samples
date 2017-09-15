@@ -76,7 +76,7 @@ Public Class EmailMessage
         Dim emailClient As New SmtpClient("smtp.office365.com", 587)
         emailClient.UseDefaultCredentials = False
         emailClient.EnableSsl = True
-        emailClient.Credentials = New System.Net.NetworkCredential("Schedules@faneuil.com", "Faneuil1")
+        emailClient.Credentials = New System.Net.NetworkCredential("", "")
         emailClient.DeliveryMethod = SmtpDeliveryMethod.Network
 
         emailClient.Send(message)
