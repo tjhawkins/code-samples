@@ -1,0 +1,207 @@
+public WeekelyEmployeeSchedule CreateSchedule()
+        {
+            var schedule = new List<EmployeeScheduledDay>();
+            var employees = GetAvailableEmployees();
+            bool openShifts = false;
+            if (employees.Any())
+            {
+                var projections = CalculateProjectedSales();
+                var allocations = GetLaborAllocations();
+                var locPositions = GetLocationPositions();
+                var locShifts = GetPositionShifts();
+
+                decimal[,] maxLaborRate = CalculateDailyLaborAllocation(projections, allocations);
+                var positionCounts = CalculateDailyPositionCounts(maxLaborRate, allocations, locPositions, locShifts);
+                var scheduleMatrix = CreateScheduleMatrix(projections, employees, locPositions);
+               
+
+                for (var dc = 0; dc < positionCounts.GetLength(0); dc++)
+                {
+
+                    //Holds scheduled employees for the day
+                    var scheduled = new List<int>();
+                    for (var s = 0; s < positionCounts.GetLength(1); s++)
+                    {
+                        //Number of positions based on sales
+                        var shiftCount = positionCounts[dc, s];
+                        var shiftID = s + 1;
+                        var shiftPositions = locShifts.Where(sp => sp.ShiftID == shiftID).Select(sp => sp.PositionID).ToList();
+                        var shift = db.Shifts.Where(sh => sh.ID == shiftID).FirstOrDefault();
+                        var hours = (decimal)Math.Round((shift.EndTime - shift.StartTime).TotalHours, 1);
+
+                        foreach (var pos in shiftPositions)
+                        {
+                            if (shiftCount <= 0)
+                                break;
+
+                            var threshold = locPositions.Where(p => p.PositionID == pos).Select(p => p.AdditionalPositionThreshold).FirstOrDefault();
+                            var positionCount = (int)Math.Round(maxLaborRate[dc, s] / threshold, 0);
+                            var emp = db.EmployeePositions.Where(p => p.PositionID == pos).ToList();
+
+                            foreach (var e in emp)
+                            {
+                                if (positionCount <= 0)
+                                    break;
+
+                                if (!scheduled.Contains(e.EmployeeID))
+                                {
+                                    var scheduleTime = scheduleMatrix[e.EmployeeID];
+                                    var date = weekendDate.AddDays((6 - dc) * -1);
+
+                                    if (scheduleTime[dc] == 1)
+                                    {
+                                        var employeeSchedule = schedule.Where(sp => sp.EmployeeID == e.EmployeeID).ToList();
+                                        var totalHours = 0M;
+                                        foreach (var sh in employeeSchedule)
+                                        {
+                                            var ps = db.Shifts.Where(i => i.ID == sh.ShiftID).FirstOrDefault();
+                                            totalHours += (decimal)Math.Round((ps.EndTime - ps.StartTime).TotalHours, 1);
+                                        }
+
+                                        if ((totalHours + hours) < 40)
+                                        {
+
+                                            var scheduledDay = new EmployeeScheduledDay()
+                                            {
+                                                EmployeeID = e.EmployeeID,
+                                                ShiftDate = date,
+                                                ShiftID = shiftID,
+                                                PosiitonID = pos
+                                            };
+
+                                            schedule.Add(scheduledDay);
+                                            db.EmployeeScheduledDays.Add(scheduledDay);
+                                            scheduled.Add(e.EmployeeID);
+                                            positionCount -= 1;
+                                            shiftCount -= 1;
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (positionCount > 0)
+                                openShifts = true;
+                        }
+                    }
+                }
+                //Save schedule to database
+                db.SaveChanges();
+            }
+
+            var weeklySchedule = FormatScheduleResponse(employees, schedule, openShifts);
+            return weeklySchedule;
+        }
+        private decimal[,] CalculateDailyLaborAllocation(WeeklyProjectedSales projections, List<LaborAllocation> allocations)
+        {
+            if (projections == null)
+                throw new Exception("Unable to create schedule");
+
+            if (allocations == null)
+                throw new Exception("Labor Allocations not set for location");
+
+            var daysofWeek = projections.projectedSales.Count;
+            var allocCount = allocations.Count;
+
+            decimal[,] maxLaborRate = new decimal[daysofWeek, allocCount];
+            for (var i = 0; i < daysofWeek; i++)
+            {
+                // Calculate max labor rate as a percentage od daily sales
+                var laborCost = projections.projectedSales[i].Sales;
+                for (var a = 0; a < allocCount; a++)
+                {
+                    maxLaborRate[i, a] = Math.Round(laborCost * allocations[a].AllocationPerc, 2);
+                }
+            }
+
+            return maxLaborRate;
+        }
+        
+         private List<LaborAllocation> GetLaborAllocations()
+        {
+            var allocations = db.LaborAllocations.Where(a => a.LocationID == locationId).OrderBy(la => la.ShiftID).ToList();
+            return allocations;
+        }
+
+        private List<LocationPosition> GetLocationPositions()
+        {
+            var positions = db.LocationPositions.Where(a => a.LocationID == locationId).ToList();
+            return positions;
+        }
+
+        private List<LocationPositionShift> GetPositionShifts()
+        {
+            var shifts = db.LocationPositionShifts.Where(a => a.LocationID == locationId).OrderBy(a => a.ShiftID).ToList();
+            return shifts;
+        }
+
+        private List<Employee> GetAvailableEmployees()
+        {
+            var employees = db.Employees.Where(e => e.Terminated == false && e.LocationID == locationId).ToList();
+            return employees;
+        }
+
+        private WeeklyProjectedSales CalculateProjectedSales()
+        {
+            var projections = new WeeklyProjectedSales();
+            var pastSales = new List<HistoricalSales>();
+
+            // get sales for the past 3 year for the given week
+            for (int i = 1; i <= 3; i++)
+            {
+                var endDate = weekendDate.AddYears(-i);
+                for (int x = 6; x >= 0; x--)
+                {
+                    var date = endDate.AddDays(-x);
+                    var data = db.HistoricalSales.Where(s => s.Date == date && s.LocationID == locationId).FirstOrDefault();
+                    pastSales.Add(data);
+                }
+            }
+
+            //Least Square Regression Model with moving 3 year average
+            for (int i = 0; i < 7; i++)
+            {
+                decimal avg = 0;
+                decimal weightedSum = 0;
+                decimal difference = 0;
+                decimal r1 = 0;
+                decimal r2 = 0;
+                decimal ratio = 0;
+                decimal value1 = 0;
+                decimal value2 = 0;
+                decimal forecastedSales = 0;
+
+                // Get Sales data for each data
+                var data = pastSales.OrderBy(s => s.Date).Where(s => (int)s.Date.DayOfWeek == i).ToList();
+                var periods = data.Count();
+
+                //Find the average of the sales data
+                avg = data.Average(d => d.Sales);
+
+                // Calculate the weighted sum
+                for (int x = 1; x <= periods; x++)
+                {
+                    weightedSum += (data[x - 1].Sales * x);
+                    r1 += (decimal)Math.Pow(x, 2);
+                    r2 += x;
+                }
+
+                //Calculate difference
+                difference = Math.Abs(weightedSum - avg * (decimal)r2);
+
+                //Calculate the ratio
+                ratio = r1 - (decimal)(Math.Pow(((double)r2 / periods), 2)) * periods;
+
+                value1 = difference / ratio;
+                value2 = Math.Abs(avg - value1 * ratio);
+                forecastedSales = (1 + periods) * value1 + value2;
+
+                var dayProjected = new DailyProjectedSales()
+                {
+                    Day = (DayOfWeek)i,
+                    Sales = Math.Round(forecastedSales, 2)
+                };
+
+                projections.projectedSales.Add(dayProjected);
+            }
+            return projections;
+        }
