@@ -1,0 +1,97 @@
+using Skysolutions.Data;
+using Skysolutions.Data.Validation;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Web.Mvc;
+using System.Linq;
+
+
+namespace Skysolutions.Mapper
+{
+    public class QuoteVM
+    {
+        public int Id { get; set; }
+
+        [Required]
+        [Display(Name = "Project/Client Name")]
+        public int ClientId { get; set; }
+        [Display(Name = "Is this project monthly?")]
+        public bool IsMonthly { get; set; }
+
+        [ValidMonths]
+        [Display(Name = "Number of Months")]
+        public int? Months { get; set; }
+
+        [Required]
+        [Display(Name = "Cleaner's Wage")]
+        public decimal CleanerWage { get; set; }
+
+        [Required]
+        [Display(Name = "Project Wage")]
+        public decimal ProjectWage { get; set; }
+
+        [Required]
+        public decimal SubTotal { get; set; }
+
+        [Required]
+        [ValidTaxRate]
+        [Display(Name = "Tax")]
+        public decimal TaxRate { get; set; }
+
+        public decimal Discount { get; set; }
+
+        [Required]
+        [Display(Name = "Grand Total")]
+        public decimal Total { get; set; }
+
+        public IEnumerable<CleaningTask> Tasks { get; set; }
+
+        public IEnumerable<ProjectTaskVM> ProjectTasks { get; set; }
+
+        public IEnumerable<DailyTaskVM> DailyTasks { get; set; }
+
+        public IEnumerable<SelectListItem> Clients { get; set; }
+
+        public IEnumerable<SelectListItem> ListOfMonths { get; set; }
+
+        public QuoteVM() { }
+
+        public QuoteVM(Project entity)
+        {
+            Id = entity.Id;
+            ClientId = entity.ClientId;
+            IsMonthly = entity.IsMonthly;
+            Months = entity.Months;
+            CleanerWage = entity.CleanersWage;
+            ProjectWage = entity.ProjectsWage;
+            SubTotal = entity.SubTotal;
+            TaxRate = entity.TaxRate;
+            Discount = entity.Discount;
+            Total = entity.Total;
+            DailyTasks = entity.DailyTasks.Select(t => new DailyTaskVM(t));
+            ProjectTasks = entity.ProjectTasks.Select(t => new ProjectTaskVM(t));
+
+        }
+
+        public Project GetEntity()
+        {
+            return new Project()
+            {
+                Id = Id,
+                ClientId = ClientId,
+                IsMonthly = IsMonthly,
+                Months = Months,
+                CleanersWage = CleanerWage,
+                ProjectsWage = ProjectWage,
+                SubTotal = SubTotal,
+                TaxRate = TaxRate,
+                Discount = Discount,
+                Total = Total,
+                DailyTasks = DailyTasks.Select(t => t.GetEntity()),
+                ProjectTasks = ProjectTasks.Select(t => t.GetEntity())
+
+            };
+        }
+
+    }
+}
