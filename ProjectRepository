@@ -1,0 +1,49 @@
+using Skysolutions.Data.Contexts;
+using System;
+using System.Collections.Generic;
+using System.Data.Entity;
+
+namespace Skysolutions.Data
+{
+    public class ProjectRepository : IRepository<Project>
+    {
+        private readonly SkySolutionsDb _context;
+
+        public ProjectRepository(SkySolutionsDb context)
+        {
+            _context = context;
+        }
+
+        public void Delete(int id)
+        {
+            var entity = _context.Projects.Find(id);
+            if (entity == null)
+            {
+                throw new NullReferenceException("Project not found");
+            }
+
+            _context.Entry(entity).State = EntityState.Deleted;
+            _context.SaveChanges();
+
+        }
+
+        public Project Get(int id)
+        {
+            return _context.Projects.Find(id);
+        }
+
+        public IEnumerable<Project> GetAll()
+        {
+            return _context.Projects;
+        }
+
+        public int Save(Project entity)
+        {
+            _context.Entry(entity).State = (entity.Id == 0) ? EntityState.Added : EntityState.Modified;
+            _context.SaveChanges();
+
+            return entity.Id;
+
+        }
+    }
+}
