@@ -1,0 +1,145 @@
+using Skysolutions.Data;
+using Skysolutions.Mapper;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web.Mvc;
+
+using static Skysolutions.Data.Constants;
+
+namespace Skysolutions.Services
+{
+    public class QuoteService
+    {
+        private readonly CleaningTaskRepository _cleaningTaskRepo;
+        private readonly ProjectRepository _projectRepo;
+        private readonly ClientService _clientService;
+
+        public QuoteService(CleaningTaskRepository cleaningTaskRepo, 
+                            ProjectRepository projectRepo,
+                            ClientService clientService)
+        {
+            _cleaningTaskRepo = cleaningTaskRepo;
+            _projectRepo = projectRepo;
+            _clientService = clientService;
+        }
+
+        public IEnumerable<CleaningTask> GetCleaningTask()
+        {
+            return _cleaningTaskRepo.GetAll().ToList();
+        }
+
+        public ProjectTaskCalculateModel CalculateTaskTotal(ProjectTaskCalculateModel item)
+        {
+            var total = 0M;
+
+            var task = _cleaningTaskRepo.Get(item.TaskId);
+            var standardRate = DetermineStandardRate(task.Rate, task.TimeUnitId);
+            var rate = (item.Count / standardRate);
+            rate = rate * item.CleaningCycle;
+
+            if (item.NumberOfCoatings > 0)
+                rate = rate * item.NumberOfCoatings;
+
+            total = Math.Round(rate * item.ProjectWage, 2);
+            item.Total = total;
+
+            return item;
+        }
+
+        public DailyTaskCalculateModel CalculateTaskTotal(DailyTaskCalculateModel item)
+        {
+            var total = 0M;
+
+            var task = _cleaningTaskRepo.Get(item.TaskId);
+            var standardRate = DetermineStandardRate(task.Rate, task.TimeUnitId);
+            var rate = (item.Count / standardRate);
+            rate = (rate * item.CleaningCycle) * item.CleaningWage;
+
+            total = Math.Round(rate * item.ServiceCycle, 2);
+            item.Total = total;
+
+            return item;
+        }
+
+
+        private decimal DetermineStandardRate(decimal itemRate, int timeUnit)
+        {
+            var rate = 0M;
+
+            switch (timeUnit)
+            {
+                case (int)UnitOfTime.Minutes:
+                    rate = itemRate * 60;
+                    break;
+                case (int)UnitOfTime.Day:
+                    rate = itemRate / 24;
+                        break;
+                default:
+                    rate = itemRate;
+                    break;
+
+            }
+
+            return rate;
+        }
+
+      public QuoteVM InitializeQuoteForm()
+      {
+            var tasks = GetCleaningTask();
+            var projectTasks = new List<ProjectTaskVM>();
+            var dailyTasks = new List<DailyTaskVM>();
+            var clients = new List<SelectListItem>();
+            clients.Add(new SelectListItem() { Text = "Select a client", Value = string.Empty });
+            clients.AddRange(_clientService.GetClientList().Select(c => new SelectListItem() { Text = c.ClientName, Value = c.Id.ToString() }));
+
+            foreach (var task in tasks)
+            {
+                if (!task.IsDailyTask)
+                {
+                    var projTask = new ProjectTaskVM
+                    {
+                        TaskId = task.Id,
+                    };
+
+                    projectTasks.Add(projTask);
+                    continue;
+                }
+
+                var dailyTask = new DailyTaskVM
+                {
+                    TaskId = task.Id
+                };
+
+                dailyTasks.Add(dailyTask);
+            }
+
+            var monthItems = new List<SelectListItem>();
+            monthItems.Add(new SelectListItem() { Value = string.Empty, Text = "Select # of months" });
+            for(var i = 1; i <=12; i++)
+            {
+                monthItems.Add(new SelectListItem() { Value = i.ToString(), Text = i.ToString() });
+            }
+
+            var vm = new QuoteVM()
+            {
+                Tasks = tasks,
+                ProjectTasks = projectTasks,
+                DailyTasks = dailyTasks,
+                Clients = clients,
+                ListOfMonths = monthItems.AsEnumerable()
+            };
+
+            return vm;
+        }
+
+        public void Savequote(QuoteVM vm)
+        {
+            var entity = vm.GetEntity();
+            if (entity.Created == null)
+                  entity.Created = DateTime.Now;
+            _projectRepo.Save(entity);
+        }
+
+    }
+}
