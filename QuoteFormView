@@ -1,0 +1,305 @@
+@using Telerik.Web.Mvc.UI
+@using Telerik.Web.Mvc.UI.Fluent
+@model Skysolutions.Mapper.QuoteVM
+
+@{
+    ViewBag.Title = "Quote";
+}
+
+@section Alerts{
+    <div id="alert"></div>
+}
+@section Body{
+
+    @using (Html.BeginForm("CalculateQuote", "Quote", FormMethod.Post, new { @class = "form" }))
+    {
+
+
+        <div class="main-panel col-xs-12">
+            <div class="col-xs-12 col-md-6">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        Project Details
+                    </div>
+                    <div class="panel-body">
+
+                        <div class="proj-desc-wrapper field-wrapper">
+                            <div class="text-field-wrapper">
+                                @Html.LabelFor(m => m.ClientId, new { @class = "form-label" })
+                                <div class="drop-down-wrapper">
+                                    @Html.DropDownListFor(m => m.ClientId, Model.Clients, new { id = "clientList", @class = "form-ddl" })
+                                </div>
+                            </div>
+                            <div class="text-field-wrapper">
+                                <div>
+                                    @Html.CheckBoxFor(m => m.IsMonthly, new { id = "isMonthly", @class = "form-checkbox" })
+                                    @Html.LabelFor(m => m.IsMonthly, new { @class = "form-label" })
+
+                                </div>
+                                <div id="monthly-wrapper" class="no-display">
+                                    @Html.LabelFor(m => m.Months, new { @class = "form-label secondary" })
+
+                                    <div>
+                                        @Html.DropDownListFor(m => m.Months, Model.ListOfMonths, new { id = "monthsList", @class = "form-ddl" })
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="proj-desc-wrapper field-wrapper">
+                            @Html.LabelFor(m => m.CleanerWage, new { @class = "form-label" })
+                            <div class="text-field-wrapper">
+                                @Html.Telerik().SliderFor(m => m.CleanerWage).HtmlAttributes(new { id = "cleanerWage", @class = "form-slider wage-slider" }).Min(7.25M).Max(25.00M).LargeStep(25.00M).SmallStep(.25M).ShowButtons(false).TickPlacement(SliderTickPlacement.None)
+                            </div>
+                            <p><span id="cleanerWageTotal">@Model.CleanerWage.ToString("C2")</span></p>
+                        </div>
+                        <div class="proj-desc-wrapper field-wrapper">
+                            @Html.LabelFor(m => m.ProjectWage, new { @class = "form-label" })
+                            <div class="text-field-wrapper">
+                                @Html.Telerik().SliderFor(m => m.ProjectWage).HtmlAttributes(new { id = "projectWage", @class = "form-slider wage-slider" }).Min(7.25M).Max(25.00M).LargeStep(25.00M).SmallStep(.25M).ShowButtons(false).TickPlacement(SliderTickPlacement.None)
+
+
+                            </div>
+                            <p><span id="projectWageTotal">@Model.ProjectWage.ToString("C2")</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xs-12 col-md-6">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        Projects
+                    </div>
+                    <div class="panel-body">
+                        @{
+                            var projectInputs = Model.Tasks.Where(t => !t.IsDailyTask);
+
+                            foreach (var input in projectInputs)
+                            {
+
+                                <div class="field-wrapper">
+                                    @Html.HiddenFor(m => m.ProjectTasks.Where(t => t.TaskId == input.Id).FirstOrDefault().TaskId, new { id = string.Concat(input.FieldName, "TaskId"), @class = "projectTaskId", @data_taskName = input.FieldName })
+                                    <label class="form-label" for="@string.Concat(input.FieldName, "Cnt")">@input.TaskName</label>
+                                    <div class="text-field-wrapper">
+
+
+                                        @(Html.Telerik().IntegerTextBoxFor(m => m.ProjectTasks.Where(t => t.TaskId == input.Id).FirstOrDefault().Count)
+                                                       .Name(string.Concat(input.FieldName, "Cnt"))
+                                                       .HtmlAttributes(new { @data_taskName = input.FieldName })
+                                                       .EmptyMessage("Enter sqft")
+                                                       .MaxValue(999999)
+                                                       .NumberGroupSeparator(",")
+                                                       .ClientEvents(e => e.OnChange("ReCalculateNewProjectCount"))
+                                                       .Spinners(false)
+                                                       .IncrementStep(100)
+                                        )
+                                    </div>
+
+                                    @if (input.HasMultiCoat)
+                                    {
+                                        <label class="form-label" for="@string.Concat(input.FieldName, "Coatings")">Number of Coats</label>
+                                        <div class="text-field-wrapper">
+                                            @(Html.Telerik().IntegerTextBoxFor(m => m.ProjectTasks.Where(t => t.TaskId == input.Id).FirstOrDefault().NumberOfCoatings)
+                                                       .Name(string.Concat(input.FieldName, "Coats"))
+                                                       .HtmlAttributes(new { @data_taskName = input.FieldName })
+                                                       .EmptyMessage("Enter number of coats")
+                                                       .MaxValue(25)
+                                                       .ClientEvents(e => e.OnChange("ReCalculateNewProjectCoats"))
+                                                       .Spinners(false)
+                                                       .IncrementStep(1)
+                                            )
+                                        </div>
+
+                                    }
+
+                                    @Html.LabelFor(i => i.ProjectTasks.Where(t => t.TaskId == input.Id).FirstOrDefault().CleaningCycle, new { @class = "form-label secondary" })
+                                    <div class="slider-field-wrapper">
+                                        @( Html.Telerik().SliderFor(m => m.ProjectTasks.Where(t => t.TaskId == input.Id).FirstOrDefault().CleaningCycle)
+                                                        .Name(string.Concat(input.FieldName, "CleaningCyc"))
+                                                        .HtmlAttributes(new { @class = "form-slider", @data_taskName = input.FieldName })
+                                                        .Min(0)
+                                                        .Max(24)
+                                                        .LargeStep(24)
+                                                        .SmallStep(1)
+                                                        .ShowButtons(false)
+                                                        .TickPlacement(SliderTickPlacement.None)
+                                                        .ClientEvents(e => e.OnChange("ReCalculateNewProjectCycle"))
+                                        )
+                                    </div>
+                                    <p id="@string.Concat(input.FieldName, "Total", "Text")">@Model.ProjectTasks.Where(t => t.TaskId == input.Id).FirstOrDefault().Total.ToString("C2")</p>
+                                    @Html.HiddenFor(m => m.ProjectTasks.Where(t => t.TaskId == input.Id).FirstOrDefault().Total, new { id = string.Concat(input.FieldName, "Total"), @class = "projectTaskTotal" })
+                                </div>
+                            }
+                        }
+                        <div class="panel-total-wrapper">
+                            @Html.Hidden(" projectsTaskTotal", Model.ProjectTasks.Sum(s => s.Total).ToString("F2"), new { id = "projectTasksTotal" })
+                            <p><strong>Total Cost: <span id="projectTasksTotalText"> @Model.ProjectTasks.Sum(m => m.Total).ToString("C2")</span></strong></p>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+            <div class="col-xs-12 col-md-6">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        Daily Cleaning Tasks
+                    </div>
+                    <div class="panel-body">
+                        @{
+                            var dailyInputs = Model.Tasks.Where(t => t.IsDailyTask);
+
+                            foreach (var input in dailyInputs)
+                            {
+
+                                <div class="field-wrapper">
+                                    @Html.HiddenFor(m => m.DailyTasks.Where(t => t.TaskId == input.Id).FirstOrDefault().TaskId, new { id = string.Concat(input.FieldName, "TaskId"), @class = "dailyTaskId", @data_taskName = input.FieldName })
+                                    <label class="form-label" for="@string.Concat(input.FieldName, "Cnt")">@input.TaskName</label>
+                                    <div class="text-field-wrapper">
+                                        @if (!input.IsAreaCleaning)
+                                        {
+                                            @(Html.Telerik().IntegerTextBoxFor(m => m.DailyTasks.Where(t => t.TaskId == input.Id).FirstOrDefault().Count)
+                                                            .Name(string.Concat(input.FieldName, "Cnt"))
+                                                            .HtmlAttributes(new { @data_taskName = input.FieldName })
+                                                            .EmptyMessage("Enter quantity")
+                                                            .Spinners(false)
+                                                            .MaxValue(999999)
+                                                            .NumberGroupSeparator(",")
+                                                            .IncrementStep(1)
+                                                            .ClientEvents(e => e.OnChange("ReCalculateNewDailyCount"))
+                                            )
+                                        }
+                                        else
+                                        {
+                                            @(Html.Telerik().IntegerTextBoxFor(m => m.DailyTasks.Where(t => t.TaskId == input.Id).FirstOrDefault().Count)
+                                                            .Name(string.Concat(input.FieldName, "Cnt"))
+                                                            .HtmlAttributes(new { @data_taskName = input.FieldName })
+                                                            .EmptyMessage("Enter sqft")
+                                                            .Spinners(false)
+                                                            .MaxValue(999999)
+                                                            .NumberGroupSeparator(",")
+                                                            .IncrementStep(100)
+                                                            .ClientEvents(e => e.OnChange("ReCalculateNewDailyCount"))
+                                            )
+                                        }
+                                    </div>
+                                    @Html.LabelFor(i => i.DailyTasks.Where(t => t.TaskId == input.Id).FirstOrDefault().ServiceDays, new { @class = "form-label secondary" })
+                                    <div class="slider-field-wrapper">
+                                        @( Html.Telerik().SliderFor(m => m.DailyTasks.Where(t => t.TaskId == input.Id).FirstOrDefault().ServiceDays)
+                                                        .Name(string.Concat(input.FieldName, "ServiceCyc"))
+                                                        .HtmlAttributes(new { @class = "form-slider", @data_taskName = input.FieldName })
+                                                        .Min(0)
+                                                        .Max(7)
+                                                        .SmallStep(1)
+                                                        .ShowButtons(false)
+                                                        .TickPlacement(SliderTickPlacement.None)
+                                                        .ClientEvents(e => e.OnChange("ReCalculateNewDailyService"))
+
+                                        )
+                                    </div>
+                                    @Html.LabelFor(i => i.DailyTasks.Where(t => t.TaskId == input.Id).FirstOrDefault().CleaningCycle, new { @class = "form-label secondary" })
+                                    <div class="slider-field-wrapper">
+                                        @( Html.Telerik().SliderFor(m => m.DailyTasks.Where(t => t.TaskId == input.Id).FirstOrDefault().CleaningCycle)
+                                                        .Name(string.Concat(input.FieldName, "CleaningCyc"))
+                                                        .HtmlAttributes(new { @class = "form-slider", @data_taskName = input.FieldName })
+                                                        .Min(0)
+                                                        .Max(24)
+                                                        .SmallStep(1)
+                                                        .ShowButtons(false)
+                                                        .TickPlacement(SliderTickPlacement.None)
+                                                        .ClientEvents(e => e.OnChange("ReCalculateNewDailyCleaning"))
+
+                                        )
+                                    </div>
+                                    <p id="@string.Concat(input.FieldName, "Total", "Text")">@Model.DailyTasks.Where(t => t.TaskId == input.Id).FirstOrDefault().Total.ToString("C2")</p>
+                                    @Html.HiddenFor(m => m.DailyTasks.Where(t => t.TaskId == input.Id).FirstOrDefault().Total, new { id = string.Concat(input.FieldName, "Total"), @class = "dailyTaskTotal" })
+                                </div>
+                            }
+                        }
+
+                        <div class="panel-total-wrapper">
+                            @Html.Hidden("dailyTasksTotal", Model.DailyTasks.Sum(s => s.Total).ToString("F2"), new { id = "dailyTasksTotal" })
+                            <p><strong>Total Cost: <span id="dailyTasksTotalText"> @Model.DailyTasks.Sum(m => m.Total).ToString("C2")</span></strong></p>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+            <div class="col-xs-12 col-md-6">
+                <div class="panel panel-default">
+                    <div class="panel-body ">
+                        <div class="field-wrapper">
+                            @Html.HiddenFor(m => m.SubTotal, new { id = "subTotal" })
+                            <p><strong>Subtotal: <span id="subTotalText"> @Model.SubTotal.ToString("C2")</span></strong></p>
+                        </div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="field-wrapper">
+                            @Html.HiddenFor(m => m.Discount, new { id = "discount" })
+                            <label for="discountField" class="form-label">
+                                Discount : <span id="discountText" class="form-label secondary">@Model.Discount.ToString("P2")</span>
+                            </label>
+                            <div class="text-field-wrapper">
+                                @(Html.Telerik().SliderFor(m => m.Discount)
+                                                .Name("discountField")
+                                                .HtmlAttributes(new { @class = "form-slider" })
+                                                .Min(0)
+                                                .Max(1)
+                                                .SmallStep(.05M)
+                                                .ShowButtons(false)
+                                                .TickPlacement(SliderTickPlacement.None)
+                                                .ClientEvents(e => e.OnChange("CalculateDiscount"))
+                                )
+                            </div>
+                            <p><strong>Total Discount: <span id="totalDiscount">@((Model.SubTotal * Model.Discount).ToString("C2"))</span></strong></p>
+                        </div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="field-wrapper no-border">
+                            @Html.HiddenFor(m => m.TaxRate, new { id = "tax" })
+                            <label for="taxField" class="form-label">
+                                Tax : <span id="taxText" class="form-label secondary">@Model.TaxRate.ToString("P2")</span>
+                            </label>
+                            <div class="text-field-wrapper">
+                                @(Html.Telerik().SliderFor(m => m.TaxRate)
+                                                 .Name("taxField")
+                                                 .HtmlAttributes(new { @class = "form-slider" })
+                                                 .Min(0)
+                                                 .Max(.500M)
+                                                 .SmallStep(.005M)
+                                                 .ShowButtons(false)
+                                                 .TickPlacement(SliderTickPlacement.None)
+                                                 .ClientEvents(e => e.OnChange("CalculateTax"))
+                                )
+
+                            </div>
+                            <p><strong>Total tax: <span id="totalTax">@(((Model.SubTotal - (Model.SubTotal * Model.Discount)) * ((Model.SubTotal - (Model.SubTotal * Model.Discount) * Model.TaxRate))).ToString("C2"))</span></strong></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    @Html.HiddenFor(m => m.Total, new { id = "total" })
+                    <p><strong>Grand Total: <span id="grandTotalText"> @Model.Total.ToString("C2")</span></strong></p>
+                </div>
+            </div>
+
+            <div class="button-wrapper col-xs-12 col-md-6">
+                <button type="submit" class="btn btn-primary btn-lg btn-block">Calulate</button>
+            </div>
+        </div>
+                            }
+}
+
+@section scripts
+{
+    <script type="text/javascript" src="~/Scripts/accounting.min.js"></script>
+    <script src="~/Scripts/loadingoverlay.min.js"></script>
+    <script type="text/javascript" src="~/Scripts/ViewScripts/quoteForm.js"></script>
+    <script type="text/javascript">
+        var model = @Html.Raw(Json.Encode(Model))
+    </script>
+
+}
+
+
