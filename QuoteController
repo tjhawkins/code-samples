@@ -1,0 +1,83 @@
+using Newtonsoft.Json;
+using Skysolutions.Data;
+using Skysolutions.Mapper;
+using Skysolutions.Services;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web.Mvc;
+using Telerik.Web.Mvc.UI.Fluent;
+
+namespace Skysolutions.FE.Controllers
+{
+    public class QuoteController : BaseController
+    {
+        private readonly QuoteService _quoteService;
+        private readonly ClientService _clientService;
+
+        public QuoteController(QuoteService quoteService, ClientService clientService)
+        {
+            _quoteService = quoteService;
+            _clientService = clientService;
+        }
+
+        // GET: Quote
+        public ActionResult Index()
+        {
+            return View();
+        }
+
+        public ActionResult QuoteForm()
+        {
+            return View(_quoteService.InitializeQuoteForm());
+        }
+
+        
+        public JsonResult CalculateTaskTotal (ProjectTaskCalculateModel vm)
+        {
+            try
+            {
+                vm = _quoteService.CalculateTaskTotal(vm);
+                return Json(vm);
+            }
+            catch (Exception e)
+            {
+                Response.StatusCode = 500;
+                Error("Cannot calculate a cost for this task");
+                return Json(PartialView("_Alerts", alerts));
+            }
+        }
+
+
+        public JsonResult CalculateDailyTaskTotal(DailyTaskCalculateModel vm)
+        {
+            try
+            {
+                vm = _quoteService.CalculateTaskTotal(vm);
+                return Json(vm);
+            }
+            catch (Exception e)
+            {
+                Response.StatusCode = 500;
+                Error("Cannot calculate a cost for this task");
+                return Json(PartialView("_Alerts", alerts));
+            }
+        }
+
+        public ActionResult CalculateQuote(QuoteVM vm)
+        {
+            //if(!ModelState.IsValid)
+            //{
+            //    Response.StatusCode = 500;
+            //    Error(ModelState);
+            //    return Json(PartialView("_Alerts", alerts));
+            //}
+
+            _quoteService.Savequote(vm);
+            return null;
+        }
+
+    }
+
+}
