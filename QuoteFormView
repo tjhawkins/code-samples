@@ -1,6 +1,6 @@
 @using Telerik.Web.Mvc.UI
 @using Telerik.Web.Mvc.UI.Fluent
-@model Skysolutions.Mapper.QuoteVM
+@model App.Mapper.QuoteVM
 
 @{
     ViewBag.Title = "Quote";
