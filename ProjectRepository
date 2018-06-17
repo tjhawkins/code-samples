@@ -1,15 +1,15 @@
-using Skysolutions.Data.Contexts;
+using App.Data.Contexts;
 using System;
 using System.Collections.Generic;
 using System.Data.Entity;
 
-namespace Skysolutions.Data
+namespace App.Data
 {
     public class ProjectRepository : IRepository<Project>
     {
-        private readonly SkySolutionsDb _context;
+        private readonly AppDb _context;
 
-        public ProjectRepository(SkySolutionsDb context)
+        public ProjectRepository(AppDb context)
         {
             _context = context;
         }
