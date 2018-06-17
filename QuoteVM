@@ -1,12 +1,12 @@
-using Skysolutions.Data;
-using Skysolutions.Data.Validation;
+using App.Data;
+using App.Data.Validation;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Web.Mvc;
 using System.Linq;
 
 
-namespace Skysolutions.Mapper
+namespace App.Mapper
 {
     public class QuoteVM
     {
