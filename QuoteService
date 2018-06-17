@@ -1,13 +1,13 @@
-using Skysolutions.Data;
-using Skysolutions.Mapper;
+using App.Data;
+using App.Mapper;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web.Mvc;
 
-using static Skysolutions.Data.Constants;
+using static App.Data.Constants;
 
-namespace Skysolutions.Services
+namespace App.Services
 {
     public class QuoteService
     {
