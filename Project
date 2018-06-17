@@ -1,0 +1,49 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+
+namespace Skysolutions.Data
+{
+    public class Project : IEntity
+    {
+        [Key]
+        [DatabaseGeneratedAttribute(DatabaseGeneratedOption.Identity)]
+        public int Id { get; set; }
+
+        public int ClientId { get; set; }
+
+        public DateTime? Created { get; set; }
+
+        public int? CreatedBy { get; set; }
+
+        public decimal CleanersWage { get; set; }
+
+        public decimal ProjectsWage { get; set; }
+
+        public decimal SubTotal { get; set; }
+
+        public decimal TaxRate { get; set; }
+
+        public decimal Discount { get; set; }
+
+        public decimal Total { get; set; }
+
+        public bool IsDeleted { get; set; }
+
+        public bool IsMonthly { get; set; }
+
+        public int? Months { get; set; }
+
+
+
+        public Client Client { get; set; }
+
+        public virtual IEnumerable<ProjectTask> ProjectTasks { get; set; }
+        public virtual IEnumerable<DailyTask> DailyTasks { get; set; }
+        public virtual IEnumerable<ProjectContract> Contract { get; set; }
+
+
+    }
+}
