@@ -1,0 +1,329 @@
+/*Daily Tasks */
+function ReCalculateNewDailyCount(e) {
+    var count = $(this).val();
+    var taskName = $(this).parent().attr('data-taskName');
+    var taskId = $('#' + taskName + 'TaskId').val();
+    var cleaningCycle = $('#' + taskName + 'CleaningCyc').val();
+    var serviceCycle = $('#' + taskName + 'ServiceCyc').val();
+
+    CalculateDailyTaskTotal(taskId, taskName, count, serviceCycle, cleaningCycle);
+}
+
+function ReCalculateNewDailyService(e) {
+    var serviceCycle = $(this).val();
+    var taskName = $(this).attr('data-taskName');
+    var taskId = $('#' + taskName + 'TaskId').val();
+    var cleaningCycle = $('#' + taskName + 'CleaningCyc').val();
+    var count = $('#' + taskName + 'Cnt').data("tTextBox").val;
+
+    CalculateDailyTaskTotal(taskId, taskName, count, serviceCycle, cleaningCycle);
+}
+
+function ReCalculateNewDailyCleaning(e) {
+    var cleaningCycle = $(this).val();
+    var taskName = $(this).attr('data-taskName');
+    var taskId = $('#' + taskName + 'TaskId').val();
+    var serviceCycle = $('#' + taskName + 'ServiceCyc').val();
+    var count = $('#' + taskName + 'Cnt').data("tTextBox").val;
+
+    CalculateDailyTaskTotal(taskId, taskName, count, serviceCycle, cleaningCycle);
+}
+
+
+function CalculateDailyTaskTotal(id, taskName, count, serviceCycle, cleaningCycle) {
+    if (count > 0 && serviceCycle > 0 && cleaningCycle > 0) {
+        var wage = $('#cleanerWage').val();
+        var url = "/Quote/CalculateDailyTaskTotal";
+
+        var data = {
+            TaskId: id,
+            FieldName: taskName,
+            CleaningWage: wage,
+            Count: count,
+            ServiceCycle: serviceCycle,
+            CleaningCycle: cleaningCycle
+        }
+
+        SendData(url, data, DailyTaskRecalculateSuccess);
+    } else if (parseFloat($('#' + taskName + "TotalText").text()) > 0) {
+        $('#' + taskName + "Total").val(accounting.toFixed(0, 2));
+        $('#' + taskName + "TotalText").text(accounting.formatMoney(0));
+        CalculateSubTotal();
+    }
+}
+
+function DailyTaskRecalculateSuccess(data) {
+    var tasksTotal = 0;
+    var taskTotal = data.Total.toFixed(2);
+    $('#' + data.FieldName + "TotalText").text(accounting.formatMoney(taskTotal));
+    $('#' + data.FieldName + "Total").val(taskTotal);
+
+    $(".dailyTaskTotal").each(function () {
+        var total = parseFloat($(this).val());
+        tasksTotal += total;
+    });
+
+    $('#dailyTasksTotal').val(accounting.toFixed(tasksTotal, 2));
+    $('#dailyTasksTotalText').text(accounting.formatMoney(tasksTotal));
+    CalculateSubTotal();
+}
+
+/*Project Tasks*/
+function ReCalculateNewProjectCount(e) {
+    var count= $(this).val();
+    var taskName = $(this).parent().attr('data-taskName');
+    var taskId = $('#' + taskName + 'TaskId').val();
+    var cycle = $('#' + taskName + 'CleaningCyc').val();
+    var coatsField = $('#' + taskName + 'Coats').data("tTextBox");
+    var coats = 0;
+
+    if (coatsField !== undefined) {
+        coats = coatsField.val;
+    }
+
+    CalculateProjectTaskTotal(taskId, taskName,count, cycle, coats)
+}
+
+function ReCalculateNewProjectCoats(e) {
+    var coats = $(this).val();
+    var taskName = $(this).parent().attr('data-taskName');
+    var taskId = $('#' + taskName + 'TaskId').val();
+    var cycle = $('#' + taskName + 'CleaningCyc').val();
+    var count = $('#' + taskName + 'Cnt').data("tTextBox").val;
+    
+    CalculateProjectTaskTotal(taskId, taskName, count, cycle, coats)
+}
+
+function ReCalculateNewProjectCycle(e) {
+    var cycle = $(this).val();
+    var taskName = $(this).attr('data-taskName');
+    var taskId = $('#' + taskName + 'TaskId').val();
+    var count = $('#' + taskName + 'Cnt').data("tTextBox").val;
+    var coatsField = $('#' + taskName + 'Coats').data("tTextBox");
+    var coats = 0;
+
+    if (coatsField !== undefined) {
+        coats = coatsField.val;
+    }
+
+    CalculateProjectTaskTotal(taskId, taskName, count, cycle, coats)
+
+}
+
+function CalculateProjectTaskTotal(id, taskName, count, cycle, coats) {
+    if (count > 0 && cycle > 0) {
+        var wage = $('#projectWage').val();
+        var url = "/Quote/CalculateTaskTotal";
+
+        var data = {
+            TaskId: id,
+            FieldName: taskName,
+            ProjectWage: wage,
+            Count: count,
+            CleaningCycle: cycle,
+            NumberOfCoatings: coats
+        }
+
+        SendData(url, data, ProjectRecalculateSuccess);
+    } else if (parseFloat($('#' + taskName + "TotalText").text()) > 0) {
+        $('#' + taskName + "Total").val(accounting.toFixed(0, 2));
+        $('#' + taskName + "TotalText").text(accounting.formatMoney(0));
+        CalculateSubTotal();
+    }
+}
+
+function ProjectRecalculateSuccess(data)
+{
+    var projectsTotal = 0;
+    var taskTotal = data.Total.toFixed(2);
+    $('#' + data.FieldName + "TotalText").text(accounting.formatMoney(taskTotal));
+    $('#' + data.FieldName + "Total").val(taskTotal);
+
+    $(".projectTaskTotal").each(function () {
+        var total = parseFloat($(this).val());
+        projectsTotal += total;
+    });
+
+    $('#projectTasksTotal').val(accounting.toFixed(projectsTotal, 2));
+    $('#projectTasksTotalText').text(accounting.formatMoney(projectsTotal));
+    CalculateSubTotal();
+}
+
+function CalculateSubTotal()
+{
+    var dailyTaskTotal = parseFloat($('#dailyTasksTotal').val());
+    var projectsTotal = parseFloat($('#projectTasksTotal').val());
+    var subTotal = dailyTaskTotal + projectsTotal;
+
+    $('#subTotal').val(accounting.toFixed(subTotal, 2));
+    $('#subTotalText').text(accounting.formatMoney(subTotal));
+
+    CalculateGrandTotal();
+}
+
+function CalculateDiscount(e) {
+    var discount = parseFloat($(this).val()) ;
+
+    $('#discount').val(accounting.toFixed(discount, 2))
+    $('#discountText').text(accounting.formatMoney(discount * 100, { symbol: "%", format: "%v%s" }));
+    CalculateGrandTotal();
+}
+
+function CalculateTax(e) {
+    var tax = parseFloat($(this).val());
+
+    $('#tax').val(tax.toString())
+    $('#taxText').text(accounting.formatMoney(tax * 100, { symbol: "%", format: "%v%s" }));
+    CalculateGrandTotal();
+}
+
+function CalculateGrandTotal()
+{
+    var subTotal = parseFloat($('#subTotal').val());
+    var discount = parseFloat($('#discount').val());
+    var discountRate = 0;
+
+ 
+    var tax = parseFloat($('#tax').val());
+    var taxRate = 0;
+
+    if (discount > 0) {
+        discountRate = subTotal * discount;
+        subTotal -= discountRate;
+    }
+    $('#totalDiscount').text(accounting.formatMoney(discountRate));
+
+   if (tax > 0)
+    {
+        taxRate = subTotal * tax;
+        subTotal += taxRate;
+    }
+    $('#totalTax').text(accounting.formatMoney(taxRate));
+
+    $('#total').val(accounting.toFixed(subTotal, 2));
+    $('#grandTotalText').text(accounting.formatMoney(subTotal));
+        
+}
+
+function CalculateQuote()
+{
+    var url = "/Quote/CalculateQuote";
+    model.CleanerWage = $('#cleanerWage').val();
+    model.ProjectWage = $('#projectWage').val();
+    model.IsMonthly = $('#isMonthly').is(":checked");
+    var months = 0;
+    var monthsField = $("#months").data("tTextBox");
+
+    if (monthsField !== undefined)
+        months = monthsField.val;
+
+    model.Months = months;
+    model.ClientId = $('#clientList').val();
+    model.SubTotal= $('#subTotal').val();
+    model.Discount = $('#discount').val();
+    model.TaxRate = $('#tax').val();
+    model.Total = $('#total').val();
+    
+
+    $('.projectTaskId').each(function (index) {
+        var taskName = $(this).attr('data-taskName');
+        var count = $('#' + taskName + 'Cnt').data("tTextBox").val;
+        var cycle = $('#' + taskName + 'CleaningCyc').val();
+        var coatsField = $('#' + taskName + 'Coats').data("tTextBox");
+        var coats = 0;
+
+        if (coatsField !== undefined)
+        {
+            coats = coatsField.val;
+        }
+       
+        var total = $('#' + taskName + 'Total').val();
+        
+
+        model.ProjectTasks[index].Count = count;
+        model.ProjectTasks[index].CleaningCycle = cycle;
+        model.ProjectTasks[index].NumberOfCoatings = coats;
+        model.ProjectTasks[index].Total = total;
+        
+    });
+
+    $('.dailyTaskId').each(function (index) {
+        var taskName = $(this).attr('data-taskName');
+        var count = $('#' + taskName + 'Cnt').data("tTextBox").val;
+        var cleaningCycle = $('#' + taskName + 'CleaningCyc').val();
+        var serviceCycle = $('#' + taskName + 'ServiceCyc').val();
+        var total = $('#' + taskName + 'Total').val();
+
+
+        model.DailyTasks[index].Count = count;
+        model.DailyTasks[index].CleaningCycle = cleaningCycle;
+        model.DailyTasks[index].ServiceDays = serviceCycle;
+        model.DailyTasks[index].Total = total;
+
+    });
+
+  // global script
+    SendData(url, model); 
+}
+
+$(document).ready(function () {
+ 
+   
+    if ($('#isMonthly').is(':checked'))
+    {
+        $('#monthly-wrapper').show();
+    }
+
+    $('#cleanerWageTotal').text(accounting.formatMoney($('#cleanerWage').val()));
+
+    $('#projectWageTotal').text(accounting.formatMoney($('#projectWage').val()));
+
+    $('#isMonthly').on('click', function () {
+        if($(this).is(':checked'))
+        {
+            $('#monthly-wrapper').show();
+        } else {
+            $('#monthly-wrapper').hide();
+        }
+    });
+
+    $('.wage-slider').on('change', function () {
+        var id = $(this).attr('id');
+        var totalField = id.concat('Total');
+        $('#' + totalField).text(parseFloat($(this).val()).toFixed(2));
+
+        if ($(this).attr("id") === 'projectWage')
+        {
+            $('.projectTaskId').each(function () {
+                var taskId = $(this).val();
+                var taskName = $(this).attr('data-taskName');
+                var count = $('#' + taskName + 'Cnt').data("tTextBox").val;
+                var cycle = $('#' + taskName + 'CleaningCyc').val();
+                var coats = 0;
+                var coatsField = $('#' + taskName + 'Coats').data("tTextBox");
+
+                if (coatsField !== undefined) {
+                    coats = coatsField.val;
+                }
+
+                CalculateProjectTaskTotal(taskId,taskName, count, cycl, coats)
+            });
+        } else {
+            $('.dailyTaskId').each(function () {
+                var taskId = $(this).val();
+                var taskName = $(this).attr('data-taskName');
+                var count = $('#' + taskName + 'Cnt').data("tTextBox").val;
+                var cleaningCycle = $('#' + taskName + 'CleaningCyc').val();
+                var serviceCycle = $('#' + taskName + 'ServiceCyc').val();
+
+                CalculateDailyTaskTotal(taskId, taskName, count,serviceCycle, cleaningCycle)
+            });
+        }
+    });
+
+    $('.form').submit(function (e) {
+        e.preventDefault();
+
+        CalculateQuote();
+    });
+});
