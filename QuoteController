@@ -1,7 +1,7 @@
 using Newtonsoft.Json;
-using Skysolutions.Data;
-using Skysolutions.Mapper;
-using Skysolutions.Services;
+using App.Data;
+using App.Mapper;
+using App.Services;
 
 using System;
 using System.Collections.Generic;
@@ -9,7 +9,7 @@ using System.Linq;
 using System.Web.Mvc;
 using Telerik.Web.Mvc.UI.Fluent;
 
-namespace Skysolutions.FE.Controllers
+namespace App.FE.Controllers
 {
     public class QuoteController : BaseController
     {
